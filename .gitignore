@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.cache/
+.turbo/
+.wrangler/
+.dev.vars
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.idea/
+.vscode/
+coverage/
+*.tsbuildinfo

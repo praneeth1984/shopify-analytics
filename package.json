@@ -1,0 +1,22 @@
+{
+  "name": "fbc-shopify",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FirstBridge Analytics — freemium Shopify analytics app (no database, stateless backend).",
+  "packageManager": "pnpm@10.33.2",
+  "workspaces": [
+    "app",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel --filter @fbc/app --filter @fbc/backend dev",
+    "build": "pnpm --filter @fbc/shared build && pnpm --filter @fbc/backend build && pnpm --filter @fbc/app build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

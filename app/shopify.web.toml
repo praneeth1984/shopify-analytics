@@ -1,0 +1,5 @@
+name = "fbc-app"
+roles = ["frontend"]
+
+[commands]
+dev = "pnpm dev"

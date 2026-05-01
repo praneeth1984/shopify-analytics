@@ -1,0 +1,46 @@
+# FirstBridge Analytics — Shopify App configuration
+# Reference: https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration
+
+client_id = "da5013ca68c07cace1f4bb8570b20af0"
+name = "FirstBridge Analytics"
+handle = "firstbridge-analytics"
+application_url = "https://shopify.dev/apps/default-app-home"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[access_scopes]
+# read_orders requires Protected Customer Data approval in the Partner dashboard.
+# For dev stores, request access under Apps → Configuration → Protected customer data.
+scopes = "read_products,read_orders,read_customers,read_inventory,read_reports"
+
+[auth]
+redirect_urls = [
+  "https://shopify.dev/apps/default-app-home/api/auth",
+]
+
+[webhooks]
+api_version = "2026-04"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/webhooks/app/uninstalled"
+
+[[webhooks.subscriptions]]
+# Plan changes are reflected in the KV `plan:{shop}` cache so the embedded app
+# sees them immediately. Source of truth remains the Billing API.
+topics = ["app_subscriptions/update"]
+uri = "/webhooks/app_subscriptions/update"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/webhooks/compliance"
+
+[pos]
+embedded = false
+
+[access]
+[access.admin]
+direct_api_mode = "online"
+embedded_app_direct_api_access = true

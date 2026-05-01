@@ -1,0 +1,30 @@
+# Cloudflare Workers configuration for FirstBridge Analytics backend.
+# Secrets are set via `wrangler secret put` and never committed:
+#   - SHOPIFY_API_KEY
+#   - SHOPIFY_API_SECRET
+#   - SHOPIFY_APP_URL          (the public URL of the deployed Worker)
+#   - ANTHROPIC_API_KEY        (Phase 3 only)
+
+name = "fbc-shopify-backend"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+SHOPIFY_API_VERSION = "2026-04"
+
+# KV is used only for ephemeral cross-request state.
+# Current uses (all under short keys, scoped per shop):
+#   - plan:{shop_domain}              30s plan-resolution cache (Billing API source-of-truth)
+#   - bulk:{shop_domain}:{...}        bulk-operation polling cursors (Phase 1.5)
+# Persistent merchant data lives in shop metafields, not KV.
+[[kv_namespaces]]
+binding = "BULK_OPS_KV"
+id = "303cccafaa72488790b03478a4207f2a"
+preview_id = "f2a89271912e452889f04806b4c10667"
+
+[observability]
+enabled = true
+
+[dev]
+port = 8787

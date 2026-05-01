@@ -1,0 +1,5 @@
+name = "fbc-backend"
+roles = ["backend"]
+
+[commands]
+dev = "pnpm dev"

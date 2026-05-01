@@ -1,0 +1,235 @@
+/**
+ * GraphQL queries for the dashboard.
+ *
+ * We deliberately request only the minimum fields needed; fewer fields = lower
+ * Shopify rate-limit cost = more concurrent merchants on free tier.
+ *
+ * The orders query is shared between overview, profit, and returns endpoints
+ * so a single fetch can power all three. Line-item, refund, and return fields
+ * are included to support each aggregator without a second pass.
+ */
+
+export const ORDERS_OVERVIEW_QUERY = /* GraphQL */ `
+  query OrdersOverview($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        processedAt
+        returnStatus
+        currentTotalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        currentSubtotalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        totalRefundedSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        customer {
+          id
+          numberOfOrders
+        }
+        lineItems(first: 50) {
+          edges {
+            node {
+              id
+              quantity
+              refundableQuantity
+              variant {
+                id
+                sku
+              }
+              product {
+                id
+                title
+              }
+              discountedUnitPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+              originalUnitPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+            }
+          }
+        }
+        refunds {
+          id
+          createdAt
+          totalRefundedSet {
+            shopMoney {
+              amount
+              currencyCode
+            }
+          }
+          refundLineItems(first: 50) {
+            edges {
+              node {
+                quantity
+                lineItem {
+                  id
+                  product {
+                    id
+                    title
+                  }
+                  variant {
+                    id
+                  }
+                }
+              }
+            }
+          }
+          transactions(first: 10) {
+            edges {
+              node {
+                kind
+                status
+                gateway
+                amountSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
+              }
+            }
+          }
+        }
+        returns(first: 10) {
+          edges {
+            node {
+              id
+              status
+              returnLineItems(first: 50) {
+                edges {
+                  node {
+                    quantity
+                    returnReason
+                    fulfillmentLineItem {
+                      lineItem {
+                        id
+                        product {
+                          id
+                          title
+                        }
+                        variant {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const SHOP_CURRENCY_QUERY = /* GraphQL */ `
+  query ShopCurrency {
+    shop {
+      currencyCode
+      ianaTimezone
+    }
+  }
+`;
+
+// ---- Order shape returned by ORDERS_OVERVIEW_QUERY ----
+//
+// Centralised here so the shared `fetchOrdersForRange` and every aggregator
+// (overview / profit / returns) work off the same type. Aggregators that only
+// need a subset of fields can structurally narrow at call sites.
+
+export type LineItemNode = {
+  id: string;
+  quantity: number;
+  refundableQuantity: number;
+  variant: { id: string; sku: string | null } | null;
+  product: { id: string; title: string } | null;
+  discountedUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  originalUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+};
+
+export type RefundLineItemNode = {
+  quantity: number;
+  lineItem: {
+    id: string;
+    product: { id: string; title: string } | null;
+    variant: { id: string } | null;
+  } | null;
+};
+
+export type RefundTransactionNode = {
+  kind: string;
+  status: string;
+  gateway: string | null;
+  amountSet: { shopMoney: { amount: string; currencyCode: string } };
+};
+
+export type RefundNode = {
+  id: string;
+  createdAt: string;
+  totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  refundLineItems: { edges: Array<{ node: RefundLineItemNode }> };
+  transactions: { edges: Array<{ node: RefundTransactionNode }> };
+};
+
+export type ReturnLineItemNode = {
+  quantity: number;
+  returnReason: string | null;
+  fulfillmentLineItem: {
+    lineItem: {
+      id: string;
+      product: { id: string; title: string } | null;
+      variant: { id: string } | null;
+    } | null;
+  } | null;
+};
+
+export type ReturnNode = {
+  id: string;
+  status: string;
+  returnLineItems: { edges: Array<{ node: ReturnLineItemNode }> };
+};
+
+export type OrderReturnStatus =
+  | "NO_RETURN"
+  | "RETURN_REQUESTED"
+  | "IN_PROGRESS"
+  | "RETURNED"
+  | "INSPECTION_COMPLETE"
+  | string;
+
+export type OrderNode = {
+  id: string;
+  processedAt: string;
+  returnStatus: OrderReturnStatus;
+  currentTotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  currentSubtotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  customer: { id: string; numberOfOrders: number } | null;
+  lineItems: { edges: Array<{ node: LineItemNode }> };
+  refunds: RefundNode[];
+  returns: { edges: Array<{ node: ReturnNode }> };
+};
