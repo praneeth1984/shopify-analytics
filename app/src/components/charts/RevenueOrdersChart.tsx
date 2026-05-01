@@ -15,7 +15,6 @@ import {
   Box,
   Button,
   Collapsible,
-  DataTable,
   InlineStack,
   Text,
 } from "@shopify/polaris";
@@ -32,6 +31,7 @@ import {
 import type { TooltipContentProps } from "recharts";
 import type { Money, OverviewMetrics, TimeSeriesPoint } from "@fbc/shared";
 import { ChartCard } from "./ChartCard.js";
+import { PaginatedDataTable } from "./PaginatedDataTable.js";
 import { useChartTheme } from "../../lib/chart-theme.js";
 import { formatMoney, formatNumber } from "../../lib/format.js";
 
@@ -170,7 +170,7 @@ export default function RevenueOrdersChart({ data, currencyCode }: Props) {
       </InlineStack>
       <Collapsible id="revenue-orders-data-table" open={tableOpen}>
         <Box paddingBlockStart="200">
-          <DataTable
+          <PaginatedDataTable
             columnContentTypes={["text", "numeric", "numeric"]}
             headings={["Date", "Revenue", "Orders"]}
             rows={tableRows}

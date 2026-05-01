@@ -9,12 +9,10 @@
 
 import { useMemo, useState } from "react";
 import {
-  Bleed,
   BlockStack,
   Box,
   Button,
   Collapsible,
-  DataTable,
   EmptyState,
   InlineStack,
   Text,
@@ -31,6 +29,7 @@ import {
 import type { TooltipContentProps } from "recharts";
 import type { ProfitMetrics } from "@fbc/shared";
 import { ChartCard } from "./ChartCard.js";
+import { PaginatedDataTable } from "./PaginatedDataTable.js";
 import { useChartTheme } from "../../lib/chart-theme.js";
 
 type Props = {
@@ -115,10 +114,35 @@ export default function MarginTrendChart({ data }: Props) {
     .map((r, i) => (i % tickStep === 0 ? r.date : ""))
     .filter((v) => v !== "");
 
+  const footer = (
+    <>
+      <InlineStack align="end">
+        <Button
+          variant="plain"
+          onClick={() => setTableOpen((v) => !v)}
+          ariaExpanded={tableOpen}
+          ariaControls="margin-data-table"
+        >
+          {tableOpen ? "Hide data table" : "Show data table"}
+        </Button>
+      </InlineStack>
+      <Collapsible id="margin-data-table" open={tableOpen}>
+        <Box paddingBlockStart="200">
+          <PaginatedDataTable
+            columnContentTypes={["text", "numeric"]}
+            headings={["Date", "Margin"]}
+            rows={tableRows}
+          />
+        </Box>
+      </Collapsible>
+    </>
+  );
+
   return (
     <ChartCard
       title="Margin over time"
       subtitle={data.granularity === "day" ? "Daily margin" : "Weekly margin"}
+      footer={footer}
     >
       <div
         role="img"
@@ -154,27 +178,6 @@ export default function MarginTrendChart({ data }: Props) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <Bleed marginInline="0">
-        <InlineStack align="end">
-          <Button
-            variant="plain"
-            onClick={() => setTableOpen((v) => !v)}
-            ariaExpanded={tableOpen}
-            ariaControls="margin-data-table"
-          >
-            {tableOpen ? "Hide data table" : "Show data table"}
-          </Button>
-        </InlineStack>
-      </Bleed>
-      <Collapsible id="margin-data-table" open={tableOpen}>
-        <Box paddingBlockStart="200">
-          <DataTable
-            columnContentTypes={["text", "numeric"]}
-            headings={["Date", "Margin"]}
-            rows={tableRows}
-          />
-        </Box>
-      </Collapsible>
     </ChartCard>
   );
 }

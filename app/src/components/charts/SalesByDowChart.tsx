@@ -6,12 +6,10 @@
 
 import { useMemo, useState } from "react";
 import {
-  Bleed,
   Box,
   Button,
   ButtonGroup,
   Collapsible,
-  DataTable,
   InlineStack,
   Text,
   BlockStack,
@@ -28,6 +26,7 @@ import {
 import type { TooltipContentProps } from "recharts";
 import type { DowPoint } from "@fbc/shared";
 import { ChartCard } from "./ChartCard.js";
+import { PaginatedDataTable } from "./PaginatedDataTable.js";
 import { useChartTheme } from "../../lib/chart-theme.js";
 import { formatMoney, formatNumber } from "../../lib/format.js";
 
@@ -111,6 +110,30 @@ export default function SalesByDowChart({ data, currencyCode }: Props) {
     formatNumber(r.orders),
   ]);
 
+  const footer = (
+    <>
+      <InlineStack align="end">
+        <Button
+          variant="plain"
+          onClick={() => setTableOpen((v) => !v)}
+          ariaExpanded={tableOpen}
+          ariaControls="dow-data-table"
+        >
+          {tableOpen ? "Hide data table" : "Show data table"}
+        </Button>
+      </InlineStack>
+      <Collapsible id="dow-data-table" open={tableOpen}>
+        <Box paddingBlockStart="200">
+          <PaginatedDataTable
+            columnContentTypes={["text", "numeric", "numeric"]}
+            headings={["Day", "Revenue", "Orders"]}
+            rows={tableRows}
+          />
+        </Box>
+      </Collapsible>
+    </>
+  );
+
   return (
     <ChartCard
       title="Sales by day of week"
@@ -133,6 +156,7 @@ export default function SalesByDowChart({ data, currencyCode }: Props) {
           </Button>
         </ButtonGroup>
       }
+      footer={footer}
     >
       <div role="img" aria-label={ariaLabel} style={{ width: "100%", height: "100%" }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -157,27 +181,6 @@ export default function SalesByDowChart({ data, currencyCode }: Props) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <Bleed marginInline="0">
-        <InlineStack align="end">
-          <Button
-            variant="plain"
-            onClick={() => setTableOpen((v) => !v)}
-            ariaExpanded={tableOpen}
-            ariaControls="dow-data-table"
-          >
-            {tableOpen ? "Hide data table" : "Show data table"}
-          </Button>
-        </InlineStack>
-      </Bleed>
-      <Collapsible id="dow-data-table" open={tableOpen}>
-        <Box paddingBlockStart="200">
-          <DataTable
-            columnContentTypes={["text", "numeric", "numeric"]}
-            headings={["Day", "Revenue", "Orders"]}
-            rows={tableRows}
-          />
-        </Box>
-      </Collapsible>
     </ChartCard>
   );
 }

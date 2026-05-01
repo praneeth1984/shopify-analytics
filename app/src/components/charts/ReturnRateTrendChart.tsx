@@ -9,12 +9,10 @@
 
 import { useMemo, useState } from "react";
 import {
-  Bleed,
   BlockStack,
   Box,
   Button,
   Collapsible,
-  DataTable,
   InlineStack,
   Text,
 } from "@shopify/polaris";
@@ -30,6 +28,7 @@ import {
 import type { TooltipContentProps } from "recharts";
 import type { TimeSeriesPoint } from "@fbc/shared";
 import { ChartCard } from "./ChartCard.js";
+import { PaginatedDataTable } from "./PaginatedDataTable.js";
 import { useChartTheme } from "../../lib/chart-theme.js";
 import { rollingAverage } from "../../lib/rolling-average.js";
 
@@ -108,10 +107,35 @@ export default function ReturnRateTrendChart({ series }: Props) {
     .map((r, i) => (i % tickStep === 0 ? r.date : ""))
     .filter((v) => v !== "");
 
+  const footer = (
+    <>
+      <InlineStack align="end">
+        <Button
+          variant="plain"
+          onClick={() => setTableOpen((v) => !v)}
+          ariaExpanded={tableOpen}
+          ariaControls="return-rate-data-table"
+        >
+          {tableOpen ? "Hide data table" : "Show data table"}
+        </Button>
+      </InlineStack>
+      <Collapsible id="return-rate-data-table" open={tableOpen}>
+        <Box paddingBlockStart="200">
+          <PaginatedDataTable
+            columnContentTypes={["text", "numeric", "numeric"]}
+            headings={["Date", "Return rate", "Rolling avg"]}
+            rows={tableRows}
+          />
+        </Box>
+      </Collapsible>
+    </>
+  );
+
   return (
     <ChartCard
       title="Return rate over time"
       subtitle="By original order date • Times in UTC"
+      footer={footer}
     >
       <div
         role="img"
@@ -159,27 +183,6 @@ export default function ReturnRateTrendChart({ series }: Props) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <Bleed marginInline="0">
-        <InlineStack align="end">
-          <Button
-            variant="plain"
-            onClick={() => setTableOpen((v) => !v)}
-            ariaExpanded={tableOpen}
-            ariaControls="return-rate-data-table"
-          >
-            {tableOpen ? "Hide data table" : "Show data table"}
-          </Button>
-        </InlineStack>
-      </Bleed>
-      <Collapsible id="return-rate-data-table" open={tableOpen}>
-        <Box paddingBlockStart="200">
-          <DataTable
-            columnContentTypes={["text", "numeric", "numeric"]}
-            headings={["Date", "Return rate", "Rolling avg"]}
-            rows={tableRows}
-          />
-        </Box>
-      </Collapsible>
     </ChartCard>
   );
 }

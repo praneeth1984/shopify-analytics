@@ -6,12 +6,10 @@
 
 import { useMemo, useState } from "react";
 import {
-  Bleed,
   BlockStack,
   Box,
   Button,
   Collapsible,
-  DataTable,
   InlineStack,
   Text,
 } from "@shopify/polaris";
@@ -19,6 +17,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import type { ReturnReasonRow } from "@fbc/shared";
 import { ChartCard } from "./ChartCard.js";
+import { PaginatedDataTable } from "./PaginatedDataTable.js";
 import { useChartTheme } from "../../lib/chart-theme.js";
 import { formatNumber } from "../../lib/format.js";
 
@@ -99,8 +98,60 @@ export default function ReturnReasonsDonut({ reasons }: Props) {
     `${(s.pct * 100).toFixed(1)}%`,
   ]);
 
+  const footer = (
+    <>
+      <BlockStack gap="100">
+        {slices.map((s, i) => (
+          <InlineStack key={s.key} align="space-between" blockAlign="center">
+            <InlineStack gap="200" blockAlign="center">
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 10,
+                  height: 10,
+                  borderRadius: 2,
+                  background: theme.donutPalette[i % theme.donutPalette.length],
+                }}
+              />
+              <Text as="span" variant="bodySm">
+                {s.label}
+              </Text>
+            </InlineStack>
+            <Text as="span" variant="bodySm" tone="subdued">
+              {`${formatNumber(s.units)} · ${(s.pct * 100).toFixed(1)}%`}
+            </Text>
+          </InlineStack>
+        ))}
+      </BlockStack>
+      <InlineStack align="end">
+        <Button
+          variant="plain"
+          onClick={() => setTableOpen((v) => !v)}
+          ariaExpanded={tableOpen}
+          ariaControls="reasons-data-table"
+        >
+          {tableOpen ? "Hide data table" : "Show data table"}
+        </Button>
+      </InlineStack>
+      <Collapsible id="reasons-data-table" open={tableOpen}>
+        <Box paddingBlockStart="200">
+          <PaginatedDataTable
+            columnContentTypes={["text", "numeric", "numeric"]}
+            headings={["Reason", "Units", "Share"]}
+            rows={tableRows}
+          />
+        </Box>
+      </Collapsible>
+    </>
+  );
+
   return (
-    <ChartCard title="Return reasons" subtitle={`${formatNumber(totalUnits)} units returned`}>
+    <ChartCard
+      title="Return reasons"
+      subtitle={`${formatNumber(totalUnits)} units returned`}
+      footer={footer}
+    >
       <div
         role="img"
         aria-label="Return reasons donut chart"
@@ -145,53 +196,6 @@ export default function ReturnReasonsDonut({ reasons }: Props) {
           </Text>
         </div>
       </div>
-      <Box paddingBlockStart="200">
-        <BlockStack gap="100">
-          {slices.map((s, i) => (
-            <InlineStack key={s.key} align="space-between" blockAlign="center">
-              <InlineStack gap="200" blockAlign="center">
-                <span
-                  aria-hidden
-                  style={{
-                    display: "inline-block",
-                    width: 10,
-                    height: 10,
-                    borderRadius: 2,
-                    background: theme.donutPalette[i % theme.donutPalette.length],
-                  }}
-                />
-                <Text as="span" variant="bodySm">
-                  {s.label}
-                </Text>
-              </InlineStack>
-              <Text as="span" variant="bodySm" tone="subdued">
-                {`${formatNumber(s.units)} · ${(s.pct * 100).toFixed(1)}%`}
-              </Text>
-            </InlineStack>
-          ))}
-        </BlockStack>
-      </Box>
-      <Bleed marginInline="0">
-        <InlineStack align="end">
-          <Button
-            variant="plain"
-            onClick={() => setTableOpen((v) => !v)}
-            ariaExpanded={tableOpen}
-            ariaControls="reasons-data-table"
-          >
-            {tableOpen ? "Hide data table" : "Show data table"}
-          </Button>
-        </InlineStack>
-      </Bleed>
-      <Collapsible id="reasons-data-table" open={tableOpen}>
-        <Box paddingBlockStart="200">
-          <DataTable
-            columnContentTypes={["text", "numeric", "numeric"]}
-            headings={["Reason", "Units", "Share"]}
-            rows={tableRows}
-          />
-        </Box>
-      </Collapsible>
     </ChartCard>
   );
 }
