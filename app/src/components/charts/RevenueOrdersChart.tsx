@@ -11,7 +11,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  Bleed,
   BlockStack,
   Box,
   Button,
@@ -157,10 +156,35 @@ export default function RevenueOrdersChart({ data, currencyCode }: Props) {
     r.orders == null ? "—" : formatNumber(r.orders),
   ]);
 
+  const footer = (
+    <>
+      <InlineStack align="end">
+        <Button
+          variant="plain"
+          onClick={() => setTableOpen((v) => !v)}
+          ariaExpanded={tableOpen}
+          ariaControls="revenue-orders-data-table"
+        >
+          {tableOpen ? "Hide data table" : "Show data table"}
+        </Button>
+      </InlineStack>
+      <Collapsible id="revenue-orders-data-table" open={tableOpen}>
+        <Box paddingBlockStart="200">
+          <DataTable
+            columnContentTypes={["text", "numeric", "numeric"]}
+            headings={["Date", "Revenue", "Orders"]}
+            rows={tableRows}
+          />
+        </Box>
+      </Collapsible>
+    </>
+  );
+
   return (
     <ChartCard
       title="Revenue and orders over time"
       subtitle={data.granularity === "day" ? "Daily totals" : "Weekly totals"}
+      footer={footer}
     >
       <div role="img" aria-label={ariaLabel} style={{ width: "100%", height: "100%" }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -244,27 +268,6 @@ export default function RevenueOrdersChart({ data, currencyCode }: Props) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <Bleed marginInline="0">
-        <InlineStack align="end">
-          <Button
-            variant="plain"
-            onClick={() => setTableOpen((v) => !v)}
-            ariaExpanded={tableOpen}
-            ariaControls="revenue-orders-data-table"
-          >
-            {tableOpen ? "Hide data table" : "Show data table"}
-          </Button>
-        </InlineStack>
-      </Bleed>
-      <Collapsible id="revenue-orders-data-table" open={tableOpen}>
-        <Box paddingBlockStart="200">
-          <DataTable
-            columnContentTypes={["text", "numeric", "numeric"]}
-            headings={["Date", "Revenue", "Orders"]}
-            rows={tableRows}
-          />
-        </Box>
-      </Collapsible>
     </ChartCard>
   );
 }

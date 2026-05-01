@@ -15,10 +15,11 @@ type Props = {
   subtitle?: string;
   action?: ReactNode;
   emptyState?: ReactNode;
+  footer?: ReactNode;
   children: ReactNode;
 };
 
-export function ChartCard({ title, subtitle, action, emptyState, children }: Props) {
+export function ChartCard({ title, subtitle, action, emptyState, footer, children }: Props) {
   return (
     <Card>
       <BlockStack gap="300">
@@ -38,6 +39,7 @@ export function ChartCard({ title, subtitle, action, emptyState, children }: Pro
         <Box minHeight="320px">
           {emptyState ?? <div style={{ height: 320, width: "100%" }}>{children}</div>}
         </Box>
+        {footer ?? null}
       </BlockStack>
     </Card>
   );
