@@ -51,6 +51,7 @@ export function ReturnResolution({ preset }: Props) {
     } catch (e) {
       const message = e instanceof ApiError ? e.message : "Could not load return resolutions.";
       setError(message);
+      setData(null);
     } finally {
       setLoading(false);
     }

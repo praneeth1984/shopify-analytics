@@ -42,6 +42,7 @@ export function TopReturnedProducts({ preset }: Props) {
     } catch (e) {
       const message = e instanceof ApiError ? e.message : "Could not load returned products.";
       setError(message);
+      setData(null);
     } finally {
       setLoading(false);
     }

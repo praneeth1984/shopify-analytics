@@ -49,7 +49,9 @@ export function makeGraphQLClient(args: {
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw Upstream("graphql request failed", `${res.status}: ${text.slice(0, 200)}`);
+      const detail = `${res.status}: ${text.slice(0, 200)}`;
+      // In development, surface the raw Shopify response so errors are diagnosable.
+      throw Upstream(args.verbose ? detail : "graphql request failed", detail);
     }
 
     const body = (await res.json()) as GraphQLResponse<T>;
