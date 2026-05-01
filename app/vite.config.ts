@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -30,5 +31,15 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
+    // Recharts is large (~150 KB gz). Keep it in its own chunk so the
+    // initial dashboard render doesn't pay for it; the chart components are
+    // lazy-loaded with React.Suspense.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          recharts: ["recharts"],
+        },
+      },
+    },
   },
 });

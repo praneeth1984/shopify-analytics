@@ -11,11 +11,6 @@ type LineItemSpec = {
   unitPrice: string;
 };
 
-type ReturnLineSpec = {
-  qty: number;
-  refLiId: string; // refers to existing lineItem id
-};
-
 type RefundLineSpec = {
   qty: number;
   refLiId: string;
@@ -27,7 +22,6 @@ function makeOrder(args: {
   refunded?: string;
   returnStatus?: OrderNode["returnStatus"];
   lineItems: LineItemSpec[];
-  returnLines?: ReturnLineSpec[];
   refundLines?: RefundLineSpec[];
 }): OrderNode {
   const liById = new Map<string, LineItemSpec>();
@@ -52,40 +46,6 @@ function makeOrder(args: {
         },
       },
     })),
-  };
-
-  const returns = {
-    edges: (args.returnLines ?? []).map((rl, i) => {
-      const li = liById.get(rl.refLiId);
-      return {
-        node: {
-          id: `gid://shopify/Return/${args.id}-${i}`,
-          status: "OPEN",
-          returnLineItems: {
-            edges: [
-              {
-                node: {
-                  quantity: rl.qty,
-                  returnReason: "UNWANTED",
-                  fulfillmentLineItem: li
-                    ? {
-                        lineItem: {
-                          id: li.liId,
-                          product:
-                            li.productId !== null
-                              ? { id: li.productId, title: li.productTitle ?? "Untitled" }
-                              : null,
-                          variant: li.variantId ? { id: li.variantId } : null,
-                        },
-                      }
-                    : null,
-                },
-              },
-            ],
-          },
-        },
-      };
-    }),
   };
 
   const refunds = (args.refundLines ?? []).map((rl, i) => {
@@ -113,7 +73,6 @@ function makeOrder(args: {
           },
         ],
       },
-      transactions: { edges: [] },
     };
   });
 
@@ -121,6 +80,9 @@ function makeOrder(args: {
     id: `gid://shopify/Order/${args.id}`,
     processedAt: "2026-04-01T12:00:00Z",
     returnStatus: args.returnStatus ?? "NO_RETURN",
+    totalPriceSet: {
+      shopMoney: { amount: args.total ?? "0.00", currencyCode: "USD" },
+    },
     currentTotalPriceSet: {
       shopMoney: { amount: args.total ?? "0.00", currencyCode: "USD" },
     },
@@ -133,7 +95,7 @@ function makeOrder(args: {
     customer: null,
     lineItems,
     refunds,
-    returns,
+    returns: { edges: [] },
   };
 }
 
@@ -158,7 +120,7 @@ describe("returns-by-product", () => {
             unitPrice: "10.00",
           },
         ],
-        returnLines: [{ qty: 1, refLiId: "gid://shopify/LineItem/1-0" }],
+        refundLines: [{ qty: 1, refLiId: "gid://shopify/LineItem/1-0" }],
       }),
     ];
     const result = computeReturnsByProduct(orders, "free");
@@ -167,9 +129,8 @@ describe("returns-by-product", () => {
   });
 
   it("computes return_rate correctly for a high-volume product", () => {
-    // Build orders with 10 units ordered, 3 returned (rate 30%).
     const lineItems: LineItemSpec[] = [];
-    const returnLines: ReturnLineSpec[] = [];
+    const refundLines: RefundLineSpec[] = [];
     for (let i = 0; i < 10; i += 1) {
       const liId = `gid://shopify/LineItem/order-${i}`;
       lineItems.push({
@@ -180,11 +141,9 @@ describe("returns-by-product", () => {
         productTitle: "Hat",
         unitPrice: "20.00",
       });
-      if (i < 3) returnLines.push({ qty: 1, refLiId: liId });
+      if (i < 3) refundLines.push({ qty: 1, refLiId: liId });
     }
-    const orders: OrderNode[] = [
-      makeOrder({ id: "single", lineItems, returnLines }),
-    ];
+    const orders: OrderNode[] = [makeOrder({ id: "single", lineItems, refundLines })];
     const result = computeReturnsByProduct(orders, "free");
     expect(result.products).toHaveLength(1);
     expect(result.products[0]?.product_id).toBe("gid://shopify/Product/P");
@@ -209,7 +168,7 @@ describe("returns-by-product", () => {
       makeOrder({
         id: "deleted",
         lineItems,
-        returnLines: [{ qty: 1, refLiId: "gid://shopify/LineItem/del-0" }],
+        refundLines: [{ qty: 1, refLiId: "gid://shopify/LineItem/del-0" }],
       }),
     ];
     const result = computeReturnsByProduct(orders, "free");
@@ -219,26 +178,20 @@ describe("returns-by-product", () => {
 
   it("includes variant breakdown on Pro and omits on Free", () => {
     const lineItems: LineItemSpec[] = [];
+    const refundLines: RefundLineSpec[] = [];
     for (let i = 0; i < 6; i += 1) {
+      const liId = `gid://shopify/LineItem/var-${i}`;
       lineItems.push({
-        liId: `gid://shopify/LineItem/var-${i}`,
+        liId,
         qty: 1,
         variantId: i < 3 ? "gid://shopify/ProductVariant/A" : "gid://shopify/ProductVariant/B",
         productId: "gid://shopify/Product/P",
         productTitle: "Hat",
         unitPrice: "10.00",
       });
+      if (i === 0 || i === 3) refundLines.push({ qty: 1, refLiId: liId });
     }
-    const orders: OrderNode[] = [
-      makeOrder({
-        id: "vars",
-        lineItems,
-        returnLines: [
-          { qty: 1, refLiId: "gid://shopify/LineItem/var-0" },
-          { qty: 1, refLiId: "gid://shopify/LineItem/var-3" },
-        ],
-      }),
-    ];
+    const orders: OrderNode[] = [makeOrder({ id: "vars", lineItems, refundLines })];
 
     const free = computeReturnsByProduct(orders, "free");
     expect(free.products).toHaveLength(1);

@@ -34,6 +34,7 @@ import { fetchOrdersForRange } from "./orders-fetch.js";
 import { readCogsState } from "../cogs/store.js";
 import { buildLookup, minorToMoney, moneyToMinor } from "../cogs/lookup.js";
 import type { CogsLookup } from "../cogs/lookup.js";
+import { buildMarginSeries, pickGranularity } from "./timeseries.js";
 
 type ProfitAggregate = {
   ordersCounted: number;
@@ -229,6 +230,9 @@ export async function computeProfit(
     );
   }
 
+  const granularity = pickGranularity(opts.range);
+  const margin_series = buildMarginSeries(currentOrders.orders, lookup, opts.range, granularity);
+
   return {
     range: opts.range,
     comparison: opts.comparison,
@@ -244,6 +248,8 @@ export async function computeProfit(
     history_clamped_to: null, // set by route handler when applicable
     default_margin_pct: cogs.meta.defaultMarginPct,
     has_any_cogs: lookup.hasAny,
+    granularity,
+    margin_series,
   };
 }
 

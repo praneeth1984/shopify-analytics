@@ -20,6 +20,12 @@ export const ORDERS_OVERVIEW_QUERY = /* GraphQL */ `
         id
         processedAt
         returnStatus
+        totalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
         currentTotalPriceSet {
           shopMoney {
             amount
@@ -97,49 +103,6 @@ export const ORDERS_OVERVIEW_QUERY = /* GraphQL */ `
               }
             }
           }
-          transactions(first: 10) {
-            edges {
-              node {
-                kind
-                status
-                gateway
-                amountSet {
-                  shopMoney {
-                    amount
-                    currencyCode
-                  }
-                }
-              }
-            }
-          }
-        }
-        returns(first: 10) {
-          edges {
-            node {
-              id
-              status
-              returnLineItems(first: 50) {
-                edges {
-                  node {
-                    quantity
-                    returnReason
-                    fulfillmentLineItem {
-                      lineItem {
-                        id
-                        product {
-                          id
-                          title
-                        }
-                        variant {
-                          id
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
         }
       }
     }
@@ -180,31 +143,16 @@ export type RefundLineItemNode = {
   } | null;
 };
 
-export type RefundTransactionNode = {
-  kind: string;
-  status: string;
-  gateway: string | null;
-  amountSet: { shopMoney: { amount: string; currencyCode: string } };
-};
-
 export type RefundNode = {
   id: string;
   createdAt: string;
   totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
   refundLineItems: { edges: Array<{ node: RefundLineItemNode }> };
-  transactions: { edges: Array<{ node: RefundTransactionNode }> };
 };
 
 export type ReturnLineItemNode = {
   quantity: number;
   returnReason: string | null;
-  fulfillmentLineItem: {
-    lineItem: {
-      id: string;
-      product: { id: string; title: string } | null;
-      variant: { id: string } | null;
-    } | null;
-  } | null;
 };
 
 export type ReturnNode = {
@@ -225,11 +173,51 @@ export type OrderNode = {
   id: string;
   processedAt: string;
   returnStatus: OrderReturnStatus;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   currentTotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   currentSubtotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
   customer: { id: string; numberOfOrders: number } | null;
   lineItems: { edges: Array<{ node: LineItemNode }> };
   refunds: RefundNode[];
-  returns: { edges: Array<{ node: ReturnNode }> };
+};
+
+/** Lightweight query used only by the returns-reasons endpoint.
+ *  Kept separate to avoid blowing the 1000-point cost budget on the main query. */
+export const ORDERS_RETURNS_QUERY = /* GraphQL */ `
+  query OrdersReturns($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        returns(first: 5) {
+          edges {
+            node {
+              returnLineItems(first: 20) {
+                edges {
+                  node {
+                    quantity
+                    returnReason
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export type ReturnReasonOrderNode = {
+  id: string;
+  returns: {
+    edges: Array<{
+      node: {
+        returnLineItems: {
+          edges: Array<{ node: ReturnLineItemNode }>;
+        };
+      };
+    }>;
+  };
 };

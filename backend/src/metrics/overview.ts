@@ -11,6 +11,13 @@ import type { GraphQLClient } from "../shopify/graphql-client.js";
 import { SHOP_CURRENCY_QUERY } from "./queries.js";
 import type { OrderNode } from "./queries.js";
 import { fetchOrdersForRange } from "./orders-fetch.js";
+import {
+  buildAlignedPreviousSeries,
+  buildDowSeries,
+  buildRevenueAndOrdersSeries,
+  buildReturnRateSeries,
+  pickGranularity,
+} from "./timeseries.js";
 import type {
   ComparisonMode,
   DateRange,
@@ -68,14 +75,18 @@ function aggregateOrders(orders: OrderNode[]): Aggregate {
   const agg = emptyAggregate();
   for (const o of orders) {
     agg.count += 1;
-    agg.revenueMinor += toMinorUnits(o.currentTotalPriceSet.shopMoney.amount);
+    // Net revenue = gross order total minus any refunded amount.
+    // currentTotalPriceSet is unreliable for manual refunds; explicit calculation is safer.
+    const grossMinor = toMinorUnits(o.totalPriceSet.shopMoney.amount);
+    const refundedMinor = toMinorUnits(o.totalRefundedSet.shopMoney.amount);
+    agg.revenueMinor += grossMinor - refundedMinor;
     if (o.customer?.id) agg.uniqueCustomers.add(o.customer.id);
 
     if (o.returnStatus === "RETURN_REQUESTED" || o.returnStatus === "IN_PROGRESS") {
       agg.pendingReturnsCount += 1;
-      const totalMinor = toMinorUnits(o.currentTotalPriceSet.shopMoney.amount);
+      const grossMinor = toMinorUnits(o.totalPriceSet.shopMoney.amount);
       const refundedMinor = toMinorUnits(o.totalRefundedSet.shopMoney.amount);
-      const remaining = totalMinor - refundedMinor;
+      const remaining = grossMinor - refundedMinor;
       agg.pendingReturnsValueMinor += remaining > 0n ? remaining : 0n;
     }
   }
@@ -85,7 +96,7 @@ function aggregateOrders(orders: OrderNode[]): Aggregate {
 async function aggregateRange(
   graphql: GraphQLClient,
   range: DateRange,
-): Promise<{ agg: Aggregate; truncated: boolean; currencyCode: string }> {
+): Promise<{ agg: Aggregate; truncated: boolean; currencyCode: string; orders: OrderNode[] }> {
   const fetched = await fetchOrdersForRange(graphql, range);
   let currencyCode = "USD";
   if (fetched.orders.length > 0) {
@@ -93,7 +104,7 @@ async function aggregateRange(
     currencyCode = first.currentTotalPriceSet.shopMoney.currencyCode || currencyCode;
   }
   const agg = aggregateOrders(fetched.orders);
-  return { agg, truncated: fetched.truncated, currencyCode };
+  return { agg, truncated: fetched.truncated, currencyCode, orders: fetched.orders };
 }
 
 function priorRange(range: DateRange, mode: ComparisonMode): DateRange | null {
@@ -130,6 +141,23 @@ export async function computeOverview(
   const currency = shopData.shop.currencyCode || current.currencyCode;
   const prior = priorRange(range, comparison);
   const previous = prior ? await aggregateRange(graphql, prior) : null;
+
+  const granularity = pickGranularity(range);
+  const { revenue_series, orders_series } = buildRevenueAndOrdersSeries(
+    current.orders,
+    range,
+    granularity,
+  );
+  const revenue_by_dow = buildDowSeries(current.orders);
+  const return_rate_series = buildReturnRateSeries(current.orders, range, granularity);
+
+  let revenue_series_previous: OverviewMetrics["revenue_series_previous"];
+  let orders_series_previous: OverviewMetrics["orders_series_previous"];
+  if (previous && prior) {
+    const aligned = buildAlignedPreviousSeries(previous.orders, prior, range, granularity);
+    revenue_series_previous = aligned.revenue_series;
+    orders_series_previous = aligned.orders_series;
+  }
 
   const currentRevenueMinor = current.agg.revenueMinor;
   const previousRevenueMinor = previous?.agg.revenueMinor ?? null;
@@ -179,6 +207,13 @@ export async function computeOverview(
     },
     conversion_rate_pct: null, // requires Online Store sessions; Phase 2.
     pending_returns,
+    granularity,
+    revenue_series,
+    orders_series,
+    revenue_by_dow,
+    return_rate_series,
+    revenue_series_previous,
+    orders_series_previous,
     truncated: current.truncated,
   };
 }

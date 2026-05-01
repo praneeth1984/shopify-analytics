@@ -7,7 +7,6 @@
  * be missing.
  */
 
-import { useCallback, useEffect, useState } from "react";
 import {
   Banner,
   BlockStack,
@@ -20,37 +19,39 @@ import {
   Text,
 } from "@shopify/polaris";
 import type { DateRangePreset, ReturnReasonsResponse } from "@fbc/shared";
-import { apiFetch, ApiError } from "../lib/api.js";
+import { useReturnReasons } from "../hooks/useReturnReasons.js";
 import { formatNumber } from "../lib/format.js";
 
 type Props = {
   preset: DateRangePreset;
+  /** Optional pre-fetched data to avoid double-fetching when a parent
+   *  shares the response with sibling components (e.g. ReturnReasonsDonut).
+   *  When provided, the component renders that data directly and skips the
+   *  internal fetch. */
+  data?: ReturnReasonsResponse | null;
+  loading?: boolean;
+  error?: string | null;
 };
 
-export function ReturnReasonsBreakdown({ preset }: Props) {
-  const [data, setData] = useState<ReturnReasonsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function ReturnReasonsBreakdown(props: Props) {
+  // Two render paths: provided-data vs. fetch-myself. Pick at the top so the
+  // hook order stays stable across renders.
+  if (props.data !== undefined || props.loading !== undefined || props.error !== undefined) {
+    return <ReturnReasonsBreakdownView {...props} />;
+  }
+  return <ReturnReasonsBreakdownFetching preset={props.preset} />;
+}
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await apiFetch<ReturnReasonsResponse>(
-        `/api/metrics/returns/reasons?preset=${encodeURIComponent(preset)}`,
-      );
-      setData(result);
-    } catch (e) {
-      const message = e instanceof ApiError ? e.message : "Could not load return reasons.";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [preset]);
+function ReturnReasonsBreakdownFetching({ preset }: { preset: DateRangePreset }) {
+  const { data, loading, error } = useReturnReasons(preset);
+  return <ReturnReasonsBreakdownView preset={preset} data={data} loading={loading} error={error} />;
+}
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+function ReturnReasonsBreakdownView({
+  data = null,
+  loading = false,
+  error = null,
+}: Props) {
 
   return (
     <Card>

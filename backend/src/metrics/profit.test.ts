@@ -48,6 +48,7 @@ type OrderFixture = {
   id: string;
   processedAt: string;
   returnStatus: string;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   currentTotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   currentSubtotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
@@ -75,6 +76,7 @@ function order(args: {
     returnStatus: "NO_RETURN",
     refunds: [],
     returns: { edges: [] },
+    totalPriceSet: { shopMoney: { amount: args.total, currencyCode: "USD" } },
     currentTotalPriceSet: { shopMoney: { amount: args.total, currencyCode: "USD" } },
     currentSubtotalPriceSet: { shopMoney: { amount: args.total, currencyCode: "USD" } },
     totalRefundedSet: { shopMoney: { amount: "0.00", currencyCode: "USD" } },

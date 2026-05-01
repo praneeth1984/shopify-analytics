@@ -48,6 +48,7 @@ export const requireSessionToken = (): MiddlewareHandler<{ Bindings: Env }> => {
         shopDomain: claims.shopDomain,
         accessToken: access.access_token,
         apiVersion: env.SHOPIFY_API_VERSION,
+        verbose: env.ENVIRONMENT === "development",
       }),
     );
     await next();

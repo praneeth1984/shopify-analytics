@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   Banner,
   BlockStack,
@@ -21,9 +21,20 @@ import { PendingReturnsHint } from "../components/PendingReturnsHint.js";
 import { TopReturnedProducts } from "../components/TopReturnedProducts.js";
 import { ReturnReasonsBreakdown } from "../components/ReturnReasonsBreakdown.js";
 import { ReturnResolution } from "../components/ReturnResolution.js";
+import { ChartSkeleton } from "../components/charts/ChartSkeleton.js";
 import { useProfit } from "../hooks/useProfit.js";
+import { useReturnReasons } from "../hooks/useReturnReasons.js";
 import { apiFetch, ApiError } from "../lib/api.js";
 import { formatMoney, formatNumber } from "../lib/format.js";
+
+// Lazy-load chart components so the recharts bundle isn't pulled into the
+// initial dashboard render. Each chart is wrapped in a Suspense boundary
+// below so the page renders metric cards immediately.
+const RevenueOrdersChart = lazy(() => import("../components/charts/RevenueOrdersChart.js"));
+const SalesByDowChart = lazy(() => import("../components/charts/SalesByDowChart.js"));
+const MarginTrendChart = lazy(() => import("../components/charts/MarginTrendChart.js"));
+const ReturnRateTrendChart = lazy(() => import("../components/charts/ReturnRateTrendChart.js"));
+const ReturnReasonsDonut = lazy(() => import("../components/charts/ReturnReasonsDonut.js"));
 
 type OverviewResponse = OverviewMetrics & { truncated: boolean };
 
@@ -38,6 +49,8 @@ export function Dashboard({ onNavigateToSettings }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const profit = useProfit(preset, "previous_period");
+  const returnReasons = useReturnReasons(preset);
+  const currencyCode = data?.revenue.current.currency_code ?? "USD";
 
   const load = useCallback(async (p: DateRangePreset) => {
     setLoading(true);
@@ -164,6 +177,20 @@ export function Dashboard({ onNavigateToSettings }: Props) {
             </Grid.Cell>
           </Grid>
 
+          {data ? (
+            <Suspense fallback={<ChartSkeleton />}>
+              <RevenueOrdersChart data={data} currencyCode={currencyCode} />
+            </Suspense>
+          ) : (
+            <ChartSkeleton />
+          )}
+
+          {data ? (
+            <Suspense fallback={<ChartSkeleton />}>
+              <SalesByDowChart data={data.revenue_by_dow} currencyCode={currencyCode} />
+            </Suspense>
+          ) : null}
+
           <BlockStack gap="200">
             <Text as="h2" variant="headingLg">
               Profit
@@ -175,6 +202,12 @@ export function Dashboard({ onNavigateToSettings }: Props) {
             />
           </BlockStack>
 
+          {profit.data ? (
+            <Suspense fallback={<ChartSkeleton />}>
+              <MarginTrendChart data={profit.data} />
+            </Suspense>
+          ) : null}
+
           <TopProfitableProducts
             products={profit.data?.top_profitable_products ?? []}
             loading={profit.loading}
@@ -184,8 +217,23 @@ export function Dashboard({ onNavigateToSettings }: Props) {
             <Text as="h2" variant="headingLg">
               Returns
             </Text>
+            {data ? (
+              <Suspense fallback={<ChartSkeleton />}>
+                <ReturnRateTrendChart series={data.return_rate_series} />
+              </Suspense>
+            ) : null}
             <TopReturnedProducts preset={preset} />
-            <ReturnReasonsBreakdown preset={preset} />
+            <ReturnReasonsBreakdown
+              preset={preset}
+              data={returnReasons.data}
+              loading={returnReasons.loading}
+              error={returnReasons.error}
+            />
+            {returnReasons.data && returnReasons.data.reasons.length > 0 ? (
+              <Suspense fallback={<ChartSkeleton />}>
+                <ReturnReasonsDonut reasons={returnReasons.data.reasons} />
+              </Suspense>
+            ) : null}
             <ReturnResolution preset={preset} />
           </BlockStack>
         </BlockStack>

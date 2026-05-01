@@ -19,10 +19,12 @@ See [CLAUDE.md](./CLAUDE.md) for the full product brief, architecture, and conve
 | Feature | Status | Endpoints |
 |---|---|---|
 | Headline overview (revenue, orders, AOV, customers) + range picker | ✅ | `GET /api/metrics/overview` |
+| **Interactive charts** (revenue/orders over time, day-of-week, margin trend, return rate) | ✅ | included in overview + profit responses |
 | **Profit dashboard** (gross profit, margin %, profit/order, top products, coverage) | ✅ R1 | `GET /api/metrics/profit` |
 | **Manual COGS entry** (20-SKU cap on Free, default margin %, variant search) | ✅ R1 | `GET/POST/DELETE/PATCH /api/cogs` |
 | **CSV export/import for COGS** | ✅ R1.2 | `GET /api/cogs/export`, `POST /api/cogs/import` |
 | **Plan resolution from Billing API + 30s KV cache** | ✅ R1.1 | invalidated by `app_subscriptions/update` webhook |
+| **Returns analytics** (top returned products, net revenue, return reasons, resolution mix) | ✅ | `GET /api/metrics/returns/*` |
 | Cohort + LTV (R2) | ⏳ next | |
 | Live "today" pulse (R3) | ⏳ | |
 | Inventory at risk (R4) | ⏳ | |
@@ -73,7 +75,7 @@ wrangler secret put SHOPIFY_API_SECRET
 pnpm -r typecheck
 pnpm -r test
 
-# Just backend (44 Vitest tests covering profit math, COGS store, COGS routes, plan resolution)
+# Just backend (76 Vitest tests covering overview, profit, timeseries, returns-*, COGS, plan)
 pnpm --filter @fbc/backend test
 
 # Just app (7 Vitest unit tests for formatting helpers)

@@ -9,6 +9,7 @@
 export type Env = {
   // Public config from wrangler.toml [vars]
   SHOPIFY_API_VERSION: string;
+  ENVIRONMENT: "development" | "production";
 
   // Secrets
   SHOPIFY_API_KEY: string;

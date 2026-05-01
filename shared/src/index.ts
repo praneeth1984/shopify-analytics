@@ -279,6 +279,8 @@ export type ProfitMetrics = {
   history_clamped_to: HistoryClamp | null;
   default_margin_pct: number;
   has_any_cogs: boolean;
+  granularity: Granularity;
+  margin_series: TimeSeriesPoint[]; // basis points; null when 0 revenue in bucket
 };
 
 /**

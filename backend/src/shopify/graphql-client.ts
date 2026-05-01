@@ -34,6 +34,7 @@ export function makeGraphQLClient(args: {
   shopDomain: string;
   accessToken: string;
   apiVersion: string;
+  verbose?: boolean;
 }): GraphQLClient {
   const endpoint = `https://${args.shopDomain}/admin/api/${args.apiVersion}/graphql.json`;
   return async function graphql<T>(query: string, variables?: Record<string, unknown>) {
@@ -58,7 +59,7 @@ export function makeGraphQLClient(args: {
         throw Upstream("Shopify rate limit reached, retry shortly", "THROTTLED");
       }
       const detail = body.errors.map((e) => e.message).join("; ");
-      throw BadRequest("GraphQL error", detail);
+      throw BadRequest(args.verbose ? detail : "GraphQL error", detail);
     }
     if (!body.data) throw Upstream("graphql response missing data");
     return { data: body.data, cost: body.extensions?.cost };

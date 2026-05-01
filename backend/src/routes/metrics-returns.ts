@@ -17,7 +17,7 @@ import { fetchOrdersForRange } from "../metrics/orders-fetch.js";
 import { clampRangeForPlan } from "../metrics/history-clamp.js";
 import { getPlanCached } from "../plan/get-plan.js";
 import { computeReturnsByProduct } from "../metrics/returns-by-product.js";
-import { computeReturnReasons } from "../metrics/returns-reasons.js";
+import { fetchReturnReasons } from "../metrics/returns-reasons.js";
 import { computeReturnResolution } from "../metrics/returns-resolution.js";
 import { BadRequest } from "../lib/errors.js";
 import type {
@@ -75,14 +75,20 @@ export function metricsReturnsRoutes() {
     const { range, historyClampedTo } = clampRangeForPlan(requested, plan);
 
     const graphql = c.get("graphql");
-    const { orders, truncated } = await fetchOrdersForRange(graphql, range);
-    const data = computeReturnReasons(orders, plan);
+    let data: Awaited<ReturnType<typeof fetchReturnReasons>>;
+    try {
+      data = await fetchReturnReasons(graphql, range, plan);
+    } catch {
+      // Order.returns requires the read_returns scope. Return empty data
+      // gracefully so the rest of the dashboard is unaffected.
+      data = { reasons: [], total_returned_units: 0, truncated: false, scope_missing: true };
+    }
 
     const body: ReturnReasonsResponse = {
       range,
       reasons: data.reasons,
       total_returned_units: data.total_returned_units,
-      truncated,
+      truncated: data.truncated,
       history_clamped_to: historyClampedTo,
     };
     return c.json(body);

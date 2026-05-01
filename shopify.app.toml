@@ -13,7 +13,7 @@ automatically_update_urls_on_dev = true
 [access_scopes]
 # read_orders requires Protected Customer Data approval in the Partner dashboard.
 # For dev stores, request access under Apps → Configuration → Protected customer data.
-scopes = "read_products,read_orders,read_customers,read_inventory,read_reports"
+scopes = "read_products,read_orders,read_customers,read_inventory,read_reports,read_returns"
 
 [auth]
 redirect_urls = [

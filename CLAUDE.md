@@ -149,23 +149,33 @@ fbc-shopify/
       pages/Dashboard.tsx               overview grid + range picker + skeletons + banners
       components/MetricCard.tsx         label + value + delta badge
       components/RangePicker.tsx        Polaris Select wrapping DateRangePreset
+      components/ReturnReasonsBreakdown.tsx  return-reasons donut chart panel
+      components/charts/                Recharts wrappers (lazy-loaded, own bundle chunk)
+        RevenueOrdersChart.tsx          dual-axis revenue + orders time-series
+        DowChart.tsx                    sales by day-of-week bar chart
+        MarginTrendChart.tsx            gross margin % trend
+        ReturnRateTrendChart.tsx        return rate trend
+      hooks/useReturnReasons.ts         SWR-style hook for /api/metrics/returns/reasons
       lib/app-bridge.ts                 window.shopify.idToken() helper
       lib/api.ts                        Bearer-authed fetch wrapper, ApiError
       lib/format.ts                     money/number/delta-pct formatting
+      lib/chart-theme.ts                Recharts color palette + axis formatter helpers
+      lib/rolling-average.ts            3-point rolling average for noisy series
       vite-env.d.ts                     VITE_BACKEND_URL typing
     index.html                          loads app-bridge.js from cdn.shopify.com
-    vite.config.ts                      port 5173, /api proxy to :8787
+    vite.config.ts                      port 5173, /api proxy to :8787, recharts manualChunk
     tsconfig.json
     package.json
   backend/                              stateless API (Cloudflare Workers + Hono)
     src/
       index.ts                          Worker entry — `export default { fetch: app.fetch }`
       app.ts                            Hono app factory; mounts /auth, /webhooks, /api/metrics
-      env.ts                            Env type (vars + secrets)
+      env.ts                            Env type (vars + secrets + ENVIRONMENT flag)
       routes/
         auth.ts                         /auth/install, /auth/callback (managed-install fallback)
         webhooks.ts                     /webhooks/compliance, /webhooks/app/uninstalled
         metrics.ts                      /api/metrics/overview (session-token guarded)
+        metrics-returns.ts              /api/metrics/returns/* (by-product, net-revenue, reasons, resolution)
       middleware/
         auth.ts                         verify JWT → token-exchange → attach GraphQL client
       shopify/
@@ -173,25 +183,34 @@ fbc-shopify/
         token-exchange.ts               OAuth 2.0 token-exchange grant (online or offline)
         oauth.ts                        install URL, callback HMAC verify (hex), code-for-token
         webhook-verify.ts               base64 HMAC verify on raw body
-        graphql-client.ts               typed Admin API client w/ throttle surfacing
+        graphql-client.ts               typed Admin API client; verbose errors in dev only
         shop-domain.ts                  *.myshopify.com regex guard
       metafields/client.ts              read/write/delete via metafieldsSet (idempotent)
       metrics/
         date-range.ts                   resolve DateRangePreset → UTC start/end
-        queries.ts                      GraphQL: orders + shop currency
-        overview.ts                     BigInt minor-unit aggregation w/ comparison
+        queries.ts                      GraphQL: orders (ORDERS_OVERVIEW_QUERY) + lightweight ORDERS_RETURNS_QUERY
+        orders-fetch.ts                 shared pagination loop (PAGE_SIZE=250, MAX_PAGES=10)
+        history-clamp.ts                90-day Free plan history clamp helper
+        overview.ts                     BigInt minor-unit aggregation w/ comparison; net revenue = totalPriceSet − totalRefundedSet
+        profit.ts                       gross profit, margin, top products, COGS coverage
+        timeseries.ts                   time-series + DoW bucketing for all dashboard charts
+        returns-by-product.ts           top returned products via refund line items
+        returns-reasons.ts              return reason breakdown (requires read_returns scope)
+        returns-resolution.ts           refund bucket breakdown (cash_refund, Phase 1)
       lib/
         logger.ts                       PII/secret-redacting JSON logger
         errors.ts                       HttpError + Unauthorized/Forbidden/BadRequest/Upstream
         crypto.ts                       Web Crypto helpers (HMAC, base64url, timing-safe eq)
-    wrangler.toml                       Workers config (vars + commented KV stub)
+    wrangler.toml                       Workers config (vars + KV binding + ENVIRONMENT=production)
     tsconfig.json
     package.json
   shared/
-    src/index.ts                        wire-contract types: Money, DateRange, Overview, Plan, …
+    src/index.ts                        wire-contract types: Money, DateRange, Overview, Plan,
+                                        PendingReturns, ReturnsByProduct, ReturnReasons,
+                                        ReturnResolution, TimeSeriesPoint, DowPoint, Granularity, …
     tsconfig.json
     package.json
-  shopify.app.toml                      app handle, scopes, redirect URLs, webhook subs
+  shopify.app.toml                      app handle, scopes (incl. read_returns), redirect URLs
   package.json                          pnpm workspaces root, dev/build/test scripts
   .gitignore  .npmrc  README.md  CLAUDE.md
   .claude/
@@ -221,11 +240,30 @@ What ships in the repo right now:
   `OverviewMetrics & { truncated: boolean }`. The dashboard surfaces a "partial results"
   banner when truncated. Phase 1.5 will swap the synchronous path for bulk operations +
   KV-cached polling cursor when ranges exceed the budget.
+  - **Revenue is always `totalPriceSet − totalRefundedSet`.** Shopify's `currentTotalPriceSet`
+    does not reliably reflect manual refunds; the explicit subtraction is the source of truth.
+    This field is fetched in `ORDERS_OVERVIEW_QUERY` and used across `overview.ts` and
+    `timeseries.ts`.
+  - **Time-series and DoW charts** are computed server-side in `metrics/timeseries.ts` and
+    returned as `TimeSeriesPoint[]` arrays on every overview and profit response. The frontend
+    renders them with Recharts (lazy-loaded into its own bundle chunk via Vite `manualChunks`).
 - **`/api/metrics/profit`** (R1) returns gross revenue, gross profit, margin %,
   profit-per-order, top 10 profitable products (product-level), `cogsCoverage` breakdown
   (explicit / default-margin / no cost), and previous-period comparison. Reuses the
   overview's order pagination — no second Admin API pass. Free plan clamps `from/to` to
   90 days and surfaces `historyClampedTo` on the response.
+- **`/api/metrics/returns/*`** — four endpoints for returns analytics:
+  - `GET /by-product` — top returned products ranked by refunded unit count, sourced
+    from `refunds[].refundLineItems` (not the Returns API, so no extra scope needed).
+  - `GET /net-revenue` — current-period revenue with pending-return value flagged as
+    at-risk (`returnStatus: RETURN_REQUESTED | IN_PROGRESS`).
+  - `GET /reasons` — return reason breakdown from `Order.returns` (requires `read_returns`
+    scope; returns `{ scope_missing: true }` gracefully if scope is absent).
+  - `GET /resolution` — refund bucket mix (Phase 1: all cash_refund; exchange detection
+    queued for Phase 2 when `Refund.transactions` becomes available via API).
+  - The reasons endpoint uses a dedicated lightweight `ORDERS_RETURNS_QUERY` (kept under
+    Shopify's 1,000-point cost ceiling); all other returns endpoints reuse the shared
+    `ORDERS_OVERVIEW_QUERY` via `fetchOrdersForRange`.
 - **`/api/cogs`** (R1) — `GET ?cursor=&query=`, `POST /upsert`, `DELETE /:variantId`,
   `PATCH /default-margin`, **`GET /export`** (CSV), **`POST /import`** (CSV merge upsert,
   partial-success on Free 20-cap, idempotent). All JWT-authed.
@@ -238,15 +276,19 @@ What ships in the repo right now:
   (no upsell modal), default-margin field, variant search Combobox, "Backup & restore"
   card with CSV export/import (DropZone, ≤1MB), and a dismissible "back up your costs"
   tip banner shown when COGS entries exist.
-- **Dashboard** renders profit cards, top profitable products, and a COGS coverage
-  banner alongside the existing overview metrics.
+- **Dashboard** renders profit cards, top profitable products, COGS coverage banner,
+  returns analytics panels, and interactive Recharts charts alongside the overview metrics.
+- **Verbose GraphQL errors in development.** `makeGraphQLClient` accepts a `verbose` flag
+  (set from `env.ENVIRONMENT === "development"`). In dev the full Shopify error message
+  is surfaced to the caller; in production only a generic "GraphQL error" is returned.
 - **Metafields used at runtime:** `plan` (denormalized cache), `cogs.meta`, `cogs.index`,
   `cogs.shard.*`, `config.preferences`. Snapshot metafields are still queued for Phase 1.5.
 - **Money math.** Aggregation uses BigInt minor units derived from Shopify's decimal
   string amounts. We never hold a money value as a JS `number`.
-- **Tests:** 44 backend Vitest tests passing (`metrics/profit`, `cogs/store`, `routes/cogs`,
-  `plan/get-plan`); 7 app Vitest tests passing (`format`). Playwright specs are stubbed
-  but `test.skip`'d — `@playwright/test` is not yet a dep.
+- **Tests:** 76 backend Vitest tests passing (`metrics/profit`, `metrics/timeseries`,
+  `metrics/returns-*`, `cogs/store`, `routes/cogs`, `plan/get-plan`); 7 app Vitest tests
+  passing (`format`). Playwright specs are stubbed but `test.skip`'d — `@playwright/test`
+  is not yet a dep.
 
 ### Operational follow-ups before production deploy
 

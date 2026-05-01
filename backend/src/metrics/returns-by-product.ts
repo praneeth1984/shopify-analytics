@@ -102,30 +102,16 @@ export function computeReturnsByProduct(orders: OrderNode[], plan: Plan): Return
       }
     }
 
-    // Returned units come from returns[].returnLineItems[].
-    for (const retEdge of order.returns.edges) {
-      const ret = retEdge.node;
-      for (const rliEdge of ret.returnLineItems.edges) {
-        const rli = rliEdge.node;
-        const li = rli.fulfillmentLineItem?.lineItem;
-        const productId = li?.product?.id ?? FALLBACK_PRODUCT_KEY;
-        const title = li?.product?.title ?? DELETED_PRODUCT_TITLE;
-        const tally = getOrCreate(byProduct, productId, title);
-        tally.returnedUnits += rli.quantity;
-        if (li?.variant?.id) {
-          const v = ensureVariant(tally, li.variant.id, null);
-          v.returnedUnits += rli.quantity;
-        }
-      }
-    }
-
-    // Refunded value is reconstructed line-by-line so we can attribute per
-    // product. We use the matching order line item's discounted unit price.
-    const liById = new Map<string, { product: { id: string; title: string } | null; unitPriceMinor: bigint }>();
+    // Returned units and refunded value both come from refunds[].refundLineItems[].
+    // fulfillmentLineItem on ReturnLineItem is not available in the API;
+    // refundLineItems carry the same product info and are more reliable.
+    const liById = new Map<string, { product: { id: string; title: string } | null; unitPriceMinor: bigint; variantId: string | null; sku: string | null }>();
     for (const edge of order.lineItems.edges) {
       liById.set(edge.node.id, {
         product: edge.node.product,
         unitPriceMinor: moneyToMinor(edge.node.discountedUnitPriceSet.shopMoney.amount),
+        variantId: edge.node.variant?.id ?? null,
+        sku: edge.node.variant?.sku ?? null,
       });
     }
     for (const refund of order.refunds) {
@@ -134,11 +120,15 @@ export function computeReturnsByProduct(orders: OrderNode[], plan: Plan): Return
         const liId = rli.lineItem?.id;
         const matched = liId ? liById.get(liId) : undefined;
         const productId = rli.lineItem?.product?.id ?? matched?.product?.id ?? FALLBACK_PRODUCT_KEY;
-        const title =
-          rli.lineItem?.product?.title ?? matched?.product?.title ?? DELETED_PRODUCT_TITLE;
+        const title = rli.lineItem?.product?.title ?? matched?.product?.title ?? DELETED_PRODUCT_TITLE;
         const tally = getOrCreate(byProduct, productId, title);
-        const unitMinor = matched?.unitPriceMinor ?? 0n;
-        tally.refundedValueMinor += unitMinor * BigInt(rli.quantity);
+        tally.returnedUnits += rli.quantity;
+        tally.refundedValueMinor += (matched?.unitPriceMinor ?? 0n) * BigInt(rli.quantity);
+        const variantId = rli.lineItem?.variant?.id ?? matched?.variantId ?? null;
+        if (variantId) {
+          const v = ensureVariant(tally, variantId, matched?.sku ?? null);
+          v.returnedUnits += rli.quantity;
+        }
       }
     }
   }
