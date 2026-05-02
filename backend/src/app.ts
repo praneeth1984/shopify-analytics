@@ -12,6 +12,7 @@ import { webhookRoutes } from "./routes/webhooks.js";
 import { metricsRoutes } from "./routes/metrics.js";
 import { metricsProfitRoutes } from "./routes/metrics-profit.js";
 import { metricsReturnsRoutes } from "./routes/metrics-returns.js";
+import { metricsGeographyRoutes } from "./routes/metrics-geography.js";
 import { cogsRoutes } from "./routes/cogs.js";
 import { preferencesRoutes } from "./routes/preferences.js";
 import { HttpError } from "./lib/errors.js";
@@ -27,6 +28,7 @@ export function createApp() {
   // More specific routes first so they take precedence in Hono's matcher.
   app.route("/api/metrics/profit", metricsProfitRoutes());
   app.route("/api/metrics/returns", metricsReturnsRoutes());
+  app.route("/api/metrics/geography", metricsGeographyRoutes());
   app.route("/api/metrics", metricsRoutes());
   app.route("/api/cogs", cogsRoutes());
   app.route("/api/preferences", preferencesRoutes());

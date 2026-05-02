@@ -221,3 +221,58 @@ export type ReturnReasonOrderNode = {
     }>;
   };
 };
+
+/**
+ * Lightweight query for geographic analytics (F01).
+ * Only requests shipping address coordinates + revenue + customer id.
+ * Kept separate from ORDERS_OVERVIEW_QUERY so adding address fields does not
+ * raise the rate-limit cost on all existing metric paths.
+ */
+export const ORDERS_GEOGRAPHY_QUERY = /* GraphQL */ `
+  query OrdersGeography($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        processedAt
+        totalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        customer {
+          id
+        }
+        shippingAddress {
+          latitude
+          longitude
+          city
+          province
+          countryCode
+          country
+        }
+      }
+    }
+  }
+`;
+
+export type GeoOrderShippingAddress = {
+  latitude: number | null;
+  longitude: number | null;
+  city: string | null;
+  province: string | null;
+  countryCode: string | null;
+  country: string | null;
+};
+
+export type GeoOrderNode = {
+  id: string;
+  processedAt: string;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  customer: { id: string } | null;
+  shippingAddress: GeoOrderShippingAddress | null;
+};

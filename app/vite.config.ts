@@ -38,6 +38,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           recharts: ["recharts"],
+          leaflet: ["leaflet", "leaflet.heat"],
         },
       },
     },

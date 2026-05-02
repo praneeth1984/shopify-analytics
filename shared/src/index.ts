@@ -312,3 +312,47 @@ export const METAFIELD_KEYS = {
 
 export const COGS_SHARD_MAX_ENTRIES = 200;
 export const COGS_MAX_SHARDS = 50;
+
+// ---- F01 Geographic Analytics ----
+
+/**
+ * A pre-clustered heat-map point returned by the geography endpoint.
+ * On Free: one point per country (centroid). On Pro: one point per 0.1° grid cell.
+ */
+export type GeoCluster = {
+  lat: number;
+  lng: number;
+  orders: number;
+  revenue_minor: number; // integer minor currency units (same currency across whole response)
+  currency_code: string;
+};
+
+/**
+ * One row in the sortable regions table.
+ * Country-level rows have province/city = undefined.
+ * State-level rows have city = undefined.
+ */
+export type RegionRow = {
+  country_code: string; // ISO 3166-1 alpha-2
+  country_name: string;
+  province: string | null; // null = this is a country-level summary row
+  city: string | null; // null = not city-level detail (Free plan or country/state row)
+  orders: number;
+  revenue: Money;
+  aov: Money;
+  revenue_pct: number; // share of total period revenue, 0..1
+  unique_customers: number;
+};
+
+export type GeographyClusterPrecision = "country" | "grid_0.1deg";
+
+export type GeographyResponse = {
+  range: DateRange;
+  clusters: GeoCluster[];
+  regions: RegionRow[];
+  no_location_count: number; // orders with null shippingAddress
+  no_location_revenue: Money | null; // null when no_location_count === 0
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  cluster_precision: GeographyClusterPrecision;
+};

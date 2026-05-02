@@ -11,30 +11,43 @@ import { useCallback, useEffect, useState } from "react";
 import { Page } from "@shopify/polaris";
 import { Dashboard } from "./pages/Dashboard.js";
 import { Settings } from "./pages/Settings.js";
+import { Geography } from "./pages/Geography.js";
 
-type Route = "dashboard" | "settings";
+type Route = "dashboard" | "settings" | "geography";
 
 function readRoute(): Route {
   if (typeof window === "undefined") return "dashboard";
-  const hash = window.location.hash.replace(/^#\/?/, "");
-  return hash.startsWith("settings") ? "settings" : "dashboard";
+  const path = window.location.pathname.replace(/\/+$/, ""); // strip trailing slash
+  if (path.endsWith("/settings")) return "settings";
+  if (path.endsWith("/geography")) return "geography";
+  return "dashboard";
+}
+
+function navigate(path: string) {
+  window.history.pushState({}, "", path);
+  // Dispatch a popstate so readRoute() re-runs
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
 export function App() {
   const [route, setRoute] = useState<Route>(readRoute);
 
   useEffect(() => {
-    const onHashChange = () => setRoute(readRoute());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const onNav = () => setRoute(readRoute());
+    window.addEventListener("popstate", onNav);
+    return () => window.removeEventListener("popstate", onNav);
   }, []);
 
   const goSettings = useCallback(() => {
-    window.location.hash = "#/settings";
+    navigate("/settings");
   }, []);
 
   if (route === "settings") {
     return <Settings />;
+  }
+
+  if (route === "geography") {
+    return <Geography />;
   }
 
   return (
