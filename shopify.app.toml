@@ -8,12 +8,12 @@ application_url = "https://firstbridge-analytics.pages.dev"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = false
+automatically_update_urls_on_dev = true
 
 [access_scopes]
 # read_orders requires Protected Customer Data approval in the Partner dashboard.
 # For dev stores, request access under Apps → Configuration → Protected customer data.
-scopes = "read_products,read_orders,read_all_orders,read_customers,read_inventory,read_reports,read_returns"
+scopes = "read_products,read_orders,read_all_orders,read_customers,read_inventory,read_reports,read_returns,write_draft_orders,read_draft_orders"
 
 [auth]
 redirect_urls = [

@@ -7,20 +7,40 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Page } from "@shopify/polaris";
+import { Page, Button, Toast, Frame } from "@shopify/polaris";
 import { Dashboard } from "./pages/Dashboard.js";
-import { Settings } from "./pages/Settings.js";
-import { Geography } from "./pages/Geography.js";
-import { Billing } from "./pages/Billing.js";
+import { apiFetch } from "./lib/api.js";
 
-type Route = "dashboard" | "settings" | "geography" | "billing";
+const IS_DEV = import.meta.env.DEV;
+import { SettingsSection } from "./pages/settings/index.js";
+import { Billing } from "./pages/Billing.js";
+import { ProfitSection } from "./pages/profit/index.js";
+import { ProductsSection } from "./pages/products/index.js";
+import { CustomersSection } from "./pages/customers/index.js";
+import { MarketingSection } from "./pages/marketing/index.js";
+import { ReportsSection } from "./pages/reports/index.js";
+
+type Route =
+  | "dashboard"
+  | "settings"
+  | "billing"
+  | "profit"
+  | "products"
+  | "customers"
+  | "marketing"
+  | "reports";
 
 function readRoute(): Route {
   if (typeof window === "undefined") return "dashboard";
-  const path = window.location.pathname.replace(/\/+$/, ""); // strip trailing slash
-  if (path.endsWith("/settings")) return "settings";
-  if (path.endsWith("/geography")) return "geography";
-  if (path.endsWith("/billing")) return "billing";
+  const path = window.location.pathname.replace(/\/+$/, "");
+  if (path.startsWith("/settings")) return "settings";
+  if (path.startsWith("/billing")) return "billing";
+  if (path.startsWith("/profit")) return "profit";
+  if (path.startsWith("/products")) return "products";
+  // /geography is now a tab inside Customers
+  if (path.startsWith("/customers") || path.startsWith("/geography")) return "customers";
+  if (path.startsWith("/marketing")) return "marketing";
+  if (path.startsWith("/reports")) return "reports";
   return "dashboard";
 }
 
@@ -31,6 +51,8 @@ export function navigate(path: string): void {
 
 export function App() {
   const [route, setRoute] = useState<Route>(readRoute);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const onNav = () => setRoute(readRoute());
@@ -42,25 +64,46 @@ export function App() {
     navigate("/settings");
   }, []);
 
-  if (route === "settings") {
-    return <Settings />;
-  }
+  const seedOrders = useCallback(async () => {
+    setSeeding(true);
+    try {
+      const res = await apiFetch<{ created: number; total: number }>("/api/dev/seed-orders", { method: "POST" });
+      setSeedMsg(`✓ Created ${res.created}/${res.total} test orders — reload the dashboard`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSeedMsg(`✗ Seed failed: ${msg.slice(0, 120)}`);
+    } finally {
+      setSeeding(false);
+    }
+  }, []);
 
-  if (route === "geography") {
-    return <Geography />;
-  }
-
-  if (route === "billing") {
-    return <Billing />;
-  }
+  if (route === "settings") return <SettingsSection />;
+  if (route === "billing") return <Billing />;
+  if (route === "profit") return <ProfitSection />;
+  if (route === "products") return <ProductsSection />;
+  if (route === "customers") return <CustomersSection />;
+  if (route === "marketing") return <MarketingSection />;
+  if (route === "reports") return <ReportsSection />;
 
   return (
-    <Page
-      title="FirstBridge Analytics"
-      subtitle="A clear view of your store, free."
-      fullWidth
-    >
-      <Dashboard onNavigateToSettings={goSettings} />
-    </Page>
+    <Frame>
+      {seedMsg && (
+        <Toast content={seedMsg} onDismiss={() => setSeedMsg(null)} duration={6000} />
+      )}
+      <Page
+        title="FirstBridge Analytics"
+        subtitle="A clear view of your store, free."
+        fullWidth
+        secondaryActions={IS_DEV ? [
+          {
+            content: seeding ? "Creating orders…" : "Seed test orders",
+            onAction: () => void seedOrders(),
+            disabled: seeding,
+          },
+        ] : undefined}
+      >
+        <Dashboard onNavigateToSettings={goSettings} />
+      </Page>
+    </Frame>
   );
 }

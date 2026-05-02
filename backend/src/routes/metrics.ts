@@ -30,8 +30,10 @@ export function metricsRoutes() {
     if (!VALID_COMPARISONS.includes(comparison)) throw BadRequest("invalid comparison");
 
     const range = resolveRange(preset, c.req.query("start"), c.req.query("end"));
+    const rawTags = c.req.query("tags");
+    const tags = rawTags ? rawTags.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const graphql = c.get("graphql");
-    const overview = await computeOverview(graphql, range, comparison);
+    const overview = await computeOverview(graphql, range, comparison, tags);
     return c.json(overview);
   });
 

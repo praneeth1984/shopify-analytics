@@ -45,8 +45,10 @@ export function metricsProfitRoutes() {
     const plan = await getPlanCached(c);
     const { range, historyClampedTo } = clampRangeForPlan(requested, plan);
 
+    const rawTags = c.req.query("tags");
+    const tags = rawTags ? rawTags.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const graphql = c.get("graphql");
-    const result = await computeProfit(graphql, { range, comparison });
+    const result = await computeProfit(graphql, { range, comparison, tags });
     if (historyClampedTo) {
       result.history_clamped_to = historyClampedTo;
     }

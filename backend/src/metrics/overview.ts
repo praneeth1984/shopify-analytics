@@ -96,8 +96,9 @@ function aggregateOrders(orders: OrderNode[]): Aggregate {
 async function aggregateRange(
   graphql: GraphQLClient,
   range: DateRange,
+  tags: string[] = [],
 ): Promise<{ agg: Aggregate; truncated: boolean; currencyCode: string; orders: OrderNode[] }> {
-  const fetched = await fetchOrdersForRange(graphql, range);
+  const fetched = await fetchOrdersForRange(graphql, range, tags);
   let currencyCode = "USD";
   if (fetched.orders.length > 0) {
     const first = fetched.orders[0]!;
@@ -130,17 +131,18 @@ export async function computeOverview(
   graphql: GraphQLClient,
   range: DateRange,
   comparison: ComparisonMode,
+  tags: string[] = [],
 ): Promise<OverviewMetrics & { truncated: boolean }> {
   // Run shop currency + current range in parallel; compare range second to avoid
   // burning budget on comparison if current is throttled.
   const [{ data: shopData }, current] = await Promise.all([
     graphql<{ shop: { currencyCode: string; ianaTimezone: string } }>(SHOP_CURRENCY_QUERY),
-    aggregateRange(graphql, range),
+    aggregateRange(graphql, range, tags),
   ]);
 
   const currency = shopData.shop.currencyCode || current.currencyCode;
   const prior = priorRange(range, comparison);
-  const previous = prior ? await aggregateRange(graphql, prior) : null;
+  const previous = prior ? await aggregateRange(graphql, prior, tags) : null;
 
   const granularity = pickGranularity(range);
   const { revenue_series, orders_series } = buildRevenueAndOrdersSeries(

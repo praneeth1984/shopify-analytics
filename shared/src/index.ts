@@ -281,6 +281,13 @@ export type ProfitMetrics = {
   has_any_cogs: boolean;
   granularity: Granularity;
   margin_series: TimeSeriesPoint[]; // basis points; null when 0 revenue in bucket
+  // F06/F07: shipping + fees
+  shipping_charged: Money;
+  est_payment_fees: Money;
+  rates_configured: boolean;
+  // Returns breakdown for P&L
+  gross_revenue_before_returns: Money; // sum of (unit price × original qty) for all line items
+  refunded_revenue: Money;             // gross_revenue_before_returns − gross_revenue
 };
 
 /**
@@ -308,10 +315,304 @@ export const METAFIELD_KEYS = {
   cogsMeta: "cogs_meta",
   cogsIndex: "cogs_index",
   cogsShardPrefix: "cogs_shard_", // suffix: numeric shard id
+  expensesPrefix: "expenses_", // suffix: YYYY-MM
 } as const;
 
 export const COGS_SHARD_MAX_ENTRIES = 200;
 export const COGS_MAX_SHARDS = 50;
+
+// ---- F05: Monthly Expenses ----
+
+export type MonthlyExpenses = {
+  meta_ads: number; // major currency units
+  google_ads: number;
+  tiktok_ads: number;
+  other_marketing: number;
+  other: Array<{ label: string; amount: number }>;
+};
+
+export type ExpensesResponse = {
+  month: string; // "YYYY-MM"
+  expenses: MonthlyExpenses;
+};
+
+// ---- Phase 1.5 Feature Types ----
+
+// F10: Products Performance
+export type ProductPerformanceRow = {
+  product_id: string;
+  title: string;
+  units_sold: number;
+  units_refunded: number;
+  gross_revenue: Money;
+  refunded_amount: Money;
+  net_revenue: Money;
+  cogs: Money | null;
+  gross_profit: Money | null;
+  gross_margin: number | null;
+  return_rate: number;
+  // F12: allocated shipping + fees → net profit
+  est_fees_allocated: Money | null;
+  est_net_profit: Money | null;
+};
+
+export type ProductPerformanceResponse = {
+  range: DateRange;
+  rows: ProductPerformanceRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  has_any_cogs: boolean;
+  total_count: number;
+  plan_capped_to: number | null;
+};
+
+// F11: Discount Codes
+export type DiscountCodeRow = {
+  code: string;
+  orders: number;
+  revenue: Money;
+  avg_discount_pct: number;
+  avg_order_value: Money;
+  repeat_customer_rate: number | null;
+};
+
+export type DiscountCodesResponse = {
+  range: DateRange;
+  codes: DiscountCodeRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  total_count: number;
+  plan_capped_to: number | null;
+};
+
+// F17: Top Customers
+export type TopCustomerRow = {
+  rank: number;
+  masked_email: string;
+  total_revenue: Money;
+  orders: number;
+  aov: Money;
+  last_order_date: string;
+  days_since_last: number;
+};
+
+export type TopCustomersResponse = {
+  range: DateRange;
+  customers: TopCustomerRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  total_count: number;
+  plan_capped_to: number | null;
+  insufficient_data: boolean;
+};
+
+// F18: Repeat Rate
+export type RepeatRateMetrics = {
+  range: DateRange;
+  repeat_rate: number | null;
+  revenue_from_repeat_pct: number;
+  first_time_customers_in_range: number;
+  repeat_rate_delta_pct: number | null;
+  insufficient_data: boolean;
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+};
+
+// F23: Payment Mix
+export type GatewayRate = {
+  gateway: string;
+  pct: number;
+  fixed_minor: number;
+};
+
+export type PaymentMixRow = {
+  gateway: string;
+  display_name: string;
+  orders: number;
+  revenue: Money;
+  est_fees: Money;
+  est_net: Money;
+  pct_of_revenue: number;
+};
+
+export type PaymentMixResponse = {
+  range: DateRange;
+  rows: PaymentMixRow[];
+  rates_configured: boolean;
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+};
+
+// F13: Inventory Velocity
+export type InventoryStatus = "healthy" | "watch" | "at_risk" | "critical" | "out_of_stock";
+
+export type InventoryRow = {
+  variant_id: string;
+  product_id: string;
+  product_title: string;
+  variant_title: string;
+  sku: string | null;
+  stock: number;
+  units_sold_30d: number;
+  daily_sell_rate: number;
+  days_remaining: number | null; // null when sell rate = 0
+  status: InventoryStatus;
+};
+
+export type InventoryResponse = {
+  rows: InventoryRow[];
+  computed_at: string; // ISO timestamp
+  total_count: number;
+  plan_capped_to: number | null;
+};
+
+// F14: Product Affinity
+export type AffinityPair = {
+  product_a_id: string;
+  product_a_title: string;
+  product_b_id: string;
+  product_b_title: string;
+  co_purchase_count: number;
+  pct_of_a_orders: number; // 0..1 — share of product A orders that include B
+};
+
+export type AffinityResponse = {
+  range: DateRange;
+  pairs: AffinityPair[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  total_count: number;
+  plan_capped_to: number | null;
+};
+
+// F16: Bundling Insights
+export type BundlePair = {
+  product_a_id: string;
+  product_a_title: string;
+  product_b_id: string;
+  product_b_title: string;
+  co_purchase_count: number;
+  pct_of_either_orders: number; // co_purchases / min(ordersA, ordersB)
+};
+
+export type BundleInsightsResponse = {
+  range: DateRange;
+  bundles: BundlePair[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  total_count: number;
+  plan_capped_to: number | null;
+};
+
+// F15: Price Point Analysis
+export type PriceBand = {
+  label: string; // e.g. "$0–$25"
+  min: number; // inclusive, in major units
+  max: number | null; // null = open-ended upper bound
+};
+
+export type PriceBandRow = {
+  band: PriceBand;
+  products: number; // distinct product count
+  units_sold: number;
+  revenue: Money;
+  avg_margin_pct: number | null; // null when no COGS configured
+  return_rate: number; // 0..1
+};
+
+export type PriceAnalysisResponse = {
+  range: DateRange;
+  bands: PriceBandRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+};
+
+// F04: CSV Export panel id
+export type ExportPanel =
+  | "overview"
+  | "profit"
+  | "products"
+  | "discounts"
+  | "customers"
+  | "payments"
+  | "returns";
+
+// ---- F19: Cohort Retention ----
+
+export type CohortRetentionPoint = {
+  m0: number; // 100 always (baseline)
+  m1: number | null;
+  m2: number | null;
+  m3: number | null;
+  m6: number | null;
+  m12: number | null;
+};
+
+export type CohortRow = {
+  cohort_month: string; // "YYYY-MM"
+  new_customers: number;
+  retention: CohortRetentionPoint;
+};
+
+export type CohortRetentionResponse = {
+  rows: CohortRow[];
+  overall_m1_retention: number | null; // weighted avg across all cohorts
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  plan_capped_to: number | null; // max cohort months shown on Free
+};
+
+// ---- F20: LTV by Acquisition Month ----
+
+export type LtvCohortPoint = {
+  m0: Money;
+  m1: Money | null;
+  m2: Money | null;
+  m3: Money | null;
+  m6: Money | null;
+  m12: Money | null;
+};
+
+export type LtvCohortRow = {
+  cohort_month: string; // "YYYY-MM"
+  customers: number;
+  avg_ltv: LtvCohortPoint; // cumulative avg LTV per customer at each interval
+};
+
+export type LtvByCohortResponse = {
+  range: DateRange;
+  rows: LtvCohortRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+};
+
+// ---- F21: RFM Segmentation ----
+
+export type RfmSegmentLabel =
+  | "champions"
+  | "loyal"
+  | "potential_loyalist"
+  | "at_risk"
+  | "cant_lose"
+  | "hibernating"
+  | "lost";
+
+export type RfmSegmentRow = {
+  segment: RfmSegmentLabel;
+  count: number;
+  pct_of_customers: number; // 0..1
+  avg_orders: number;
+  avg_revenue: Money;
+  avg_days_since_last: number;
+};
+
+export type RfmResponse = {
+  range: DateRange;
+  segments: RfmSegmentRow[];
+  total_customers: number;
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+};
 
 // ---- F01 Geographic Analytics ----
 

@@ -42,6 +42,7 @@ type LineItem = {
   product: { id: string; title: string } | null;
   discountedUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   originalUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  originalTotalSet: { shopMoney: { amount: string; currencyCode: string } };
 };
 
 type OrderFixture = {
@@ -52,6 +53,10 @@ type OrderFixture = {
   currentTotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   currentSubtotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalShippingPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  shippingLines: { edges: never[] };
+  paymentGatewayNames: string[];
+  discountCodes: string[];
   customer: { id: string; numberOfOrders: number } | null;
   lineItems: { edges: Array<{ node: LineItem }> };
   refunds: never[];
@@ -76,6 +81,10 @@ function order(args: {
     returnStatus: "NO_RETURN",
     refunds: [],
     returns: { edges: [] },
+    paymentGatewayNames: ["shopify_payments"],
+    discountCodes: [],
+    totalShippingPriceSet: { shopMoney: { amount: "0.00", currencyCode: "USD" } },
+    shippingLines: { edges: [] as never[] },
     totalPriceSet: { shopMoney: { amount: args.total, currencyCode: "USD" } },
     currentTotalPriceSet: { shopMoney: { amount: args.total, currencyCode: "USD" } },
     currentSubtotalPriceSet: { shopMoney: { amount: args.total, currencyCode: "USD" } },
@@ -94,6 +103,12 @@ function order(args: {
           },
           originalUnitPriceSet: {
             shopMoney: { amount: li.unitPrice, currencyCode: "USD" },
+          },
+          originalTotalSet: {
+            shopMoney: {
+              amount: (parseFloat(li.unitPrice) * (li.refundableQty ?? li.qty)).toFixed(2),
+              currencyCode: "USD",
+            },
           },
         },
       })),

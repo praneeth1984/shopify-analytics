@@ -22,6 +22,7 @@ import type {
   CogsCoverage,
   ComparisonMode,
   DateRange,
+  GatewayRate,
   Money,
   ProfitDelta,
   ProfitMetrics,
@@ -38,8 +39,11 @@ import { buildMarginSeries, pickGranularity } from "./timeseries.js";
 
 type ProfitAggregate = {
   ordersCounted: number;
-  grossRevenueMinor: bigint;
+  grossRevenueBeforeReturnsMinor: bigint; // sum of (unit price × original qty) for all items
+  grossRevenueMinor: bigint;              // sum of (unit price × refundable qty) — net of returns
   grossProfitMinor: bigint;
+  shippingChargedMinor: bigint;
+  estPaymentFeesMinor: bigint;
   coverage: CogsCoverage;
   byProduct: Map<
     string,
@@ -50,8 +54,11 @@ type ProfitAggregate = {
 function emptyAggregate(): ProfitAggregate {
   return {
     ordersCounted: 0,
+    grossRevenueBeforeReturnsMinor: 0n,
     grossRevenueMinor: 0n,
     grossProfitMinor: 0n,
+    shippingChargedMinor: 0n,
+    estPaymentFeesMinor: 0n,
     coverage: {
       lineItemsTotal: 0,
       lineItemsWithExplicitCogs: 0,
@@ -60,6 +67,19 @@ function emptyAggregate(): ProfitAggregate {
     },
     byProduct: new Map(),
   };
+}
+
+function estimateFeesForOrder(
+  revenueMinor: bigint,
+  gatewayNames: string[],
+  rates: GatewayRate[],
+): bigint {
+  if (rates.length === 0 || gatewayNames.length === 0) return 0n;
+  const gateway = gatewayNames[0]!.toLowerCase();
+  const rate = rates.find((r) => r.gateway.toLowerCase() === gateway);
+  if (!rate) return 0n;
+  const pctFee = (revenueMinor * BigInt(Math.round(rate.pct * 1_000_000))) / 1_000_000n;
+  return pctFee + BigInt(rate.fixed_minor);
 }
 
 function deltaPct(current: bigint, previous: bigint): number | null {
@@ -76,19 +96,29 @@ function deltaPctNum(current: number, previous: number): number | null {
 
 // ---- Aggregation ----
 
-function aggregateOrders(orders: OrderNode[], lookup: CogsLookup): ProfitAggregate {
+function aggregateOrders(
+  orders: OrderNode[],
+  lookup: CogsLookup,
+  gatewayRates: GatewayRate[] = [],
+): ProfitAggregate {
   const agg = emptyAggregate();
 
   for (const order of orders) {
     agg.ordersCounted += 1;
 
+    const shippingMinor = moneyToMinor(order.totalShippingPriceSet.shopMoney.amount);
+    agg.shippingChargedMinor += shippingMinor;
+
     for (const edge of order.lineItems.edges) {
       const li = edge.node;
       const netQty = li.refundableQuantity;
+      const unitPriceMinor = moneyToMinor(li.discountedUnitPriceSet.shopMoney.amount);
+
+      // Always accumulate original qty for gross-before-returns
+      agg.grossRevenueBeforeReturnsMinor += unitPriceMinor * BigInt(li.quantity);
+
       if (netQty <= 0) continue;
       const qty = BigInt(netQty);
-
-      const unitPriceMinor = moneyToMinor(li.discountedUnitPriceSet.shopMoney.amount);
       const lineRevenueMinor = unitPriceMinor * qty;
 
       agg.coverage.lineItemsTotal += 1;
@@ -126,6 +156,14 @@ function aggregateOrders(orders: OrderNode[], lookup: CogsLookup): ProfitAggrega
         agg.byProduct.set(productId, existing);
       }
     }
+
+    // F06: estimate payment fees for this order using its order-level revenue
+    const orderRevenueMinor = moneyToMinor(order.totalPriceSet.shopMoney.amount);
+    agg.estPaymentFeesMinor += estimateFeesForOrder(
+      orderRevenueMinor,
+      order.paymentGatewayNames,
+      gatewayRates,
+    );
   }
 
   return agg;
@@ -177,6 +215,7 @@ function topProductsFrom(
 export type ComputeProfitOptions = {
   range: DateRange;
   comparison: ComparisonMode;
+  tags?: string[];
 };
 
 export async function computeProfit(
@@ -185,18 +224,22 @@ export async function computeProfit(
 ): Promise<ProfitMetrics> {
   const [{ data: shopData }, currentOrders] = await Promise.all([
     graphql<{ shop: { currencyCode: string; ianaTimezone: string } }>(SHOP_CURRENCY_QUERY),
-    fetchOrdersForRange(graphql, opts.range),
+    fetchOrdersForRange(graphql, opts.range, opts.tags ?? []),
   ]);
   const currency = shopData.shop.currencyCode;
 
-  const cogs = await readCogsState(graphql, currency);
+  const [cogs, { preferences }] = await Promise.all([
+    readCogsState(graphql, currency),
+    import("../routes/preferences.js").then((m) => m.readPreferences(graphql).then((p) => ({ preferences: p }))),
+  ]);
   const lookup = buildLookup(cogs.meta, cogs.entries);
+  const gatewayRates = preferences.gatewayRates ?? [];
 
-  const currentAgg = aggregateOrders(currentOrders.orders, lookup);
+  const currentAgg = aggregateOrders(currentOrders.orders, lookup, gatewayRates);
 
   const prior = priorRange(opts.range, opts.comparison);
-  const previous = prior ? await fetchOrdersForRange(graphql, prior) : null;
-  const previousAgg = previous ? aggregateOrders(previous.orders, lookup) : null;
+  const previous = prior ? await fetchOrdersForRange(graphql, prior, opts.tags ?? []) : null;
+  const previousAgg = previous ? aggregateOrders(previous.orders, lookup, gatewayRates) : null;
 
   const grossRevenueMinor = currentAgg.grossRevenueMinor;
   const grossProfitMinor = currentAgg.grossProfitMinor;
@@ -250,6 +293,14 @@ export async function computeProfit(
     has_any_cogs: lookup.hasAny,
     granularity,
     margin_series,
+    shipping_charged: minorToMoney(currentAgg.shippingChargedMinor, currency) as Money,
+    est_payment_fees: minorToMoney(currentAgg.estPaymentFeesMinor, currency) as Money,
+    rates_configured: gatewayRates.length > 0,
+    gross_revenue_before_returns: minorToMoney(currentAgg.grossRevenueBeforeReturnsMinor, currency) as Money,
+    refunded_revenue: minorToMoney(
+      currentAgg.grossRevenueBeforeReturnsMinor - currentAgg.grossRevenueMinor,
+      currency,
+    ) as Money,
   };
 }
 

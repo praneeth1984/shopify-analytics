@@ -14,9 +14,16 @@ import { metricsRoutes } from "./routes/metrics.js";
 import { metricsProfitRoutes } from "./routes/metrics-profit.js";
 import { metricsReturnsRoutes } from "./routes/metrics-returns.js";
 import { metricsGeographyRoutes } from "./routes/metrics-geography.js";
+import { metricsProductsRoutes } from "./routes/metrics-products.js";
+import { metricsDiscountsRoutes } from "./routes/metrics-discounts.js";
+import { metricsCustomersRoutes } from "./routes/metrics-customers.js";
+import { metricsPaymentsRoutes } from "./routes/metrics-payments.js";
+import { exportsRoutes } from "./routes/exports.js";
 import { cogsRoutes } from "./routes/cogs.js";
 import { preferencesRoutes } from "./routes/preferences.js";
 import { billingRoutes } from "./routes/billing.js";
+import { expensesRoutes } from "./routes/expenses.js";
+import { devSeedRoutes } from "./routes/dev-seed.js";
 import { HttpError } from "./lib/errors.js";
 import { log } from "./lib/logger.js";
 
@@ -61,10 +68,19 @@ export function createApp() {
   app.route("/api/metrics/profit", metricsProfitRoutes());
   app.route("/api/metrics/returns", metricsReturnsRoutes());
   app.route("/api/metrics/geography", metricsGeographyRoutes());
+  app.route("/api/metrics/products", metricsProductsRoutes());
+  app.route("/api/metrics/discounts", metricsDiscountsRoutes());
+  app.route("/api/metrics/customers", metricsCustomersRoutes());
+  app.route("/api/metrics/payments", metricsPaymentsRoutes());
   app.route("/api/metrics", metricsRoutes());
+  app.route("/api/exports", exportsRoutes());
   app.route("/api/billing", billingRoutes());
   app.route("/api/cogs", cogsRoutes());
   app.route("/api/preferences", preferencesRoutes());
+  app.route("/api/expenses", expensesRoutes());
+
+  // Dev-only seeding endpoint — guarded inside the route by ENVIRONMENT check
+  app.route("/api/dev", devSeedRoutes());
 
   app.onError((err, c) => {
     if (err instanceof HttpError) {

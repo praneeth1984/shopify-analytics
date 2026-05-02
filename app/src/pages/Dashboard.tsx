@@ -10,13 +10,15 @@ import {
   SkeletonBodyText,
   Card,
   Text,
+  TextField,
 } from "@shopify/polaris";
-import type { DateRangePreset, OverviewMetrics } from "@fbc/shared";
+import type { ComparisonMode, DateRangePreset, OverviewMetrics } from "@fbc/shared";
 
 import { navigate } from "../App.js";
 
 import { MetricCard } from "../components/MetricCard.js";
 import { RangePicker } from "../components/RangePicker.js";
+import { ComparisonPicker } from "../components/ComparisonPicker.js";
 import { ProfitCards } from "../components/ProfitCards.js";
 import { TopProfitableProducts } from "../components/TopProfitableProducts.js";
 import { CogsCoverageBanner } from "../components/CogsCoverageBanner.js";
@@ -27,12 +29,10 @@ import { ReturnResolution } from "../components/ReturnResolution.js";
 import { ChartSkeleton } from "../components/charts/ChartSkeleton.js";
 import { useProfit } from "../hooks/useProfit.js";
 import { useReturnReasons } from "../hooks/useReturnReasons.js";
+import { SavedViewsButton } from "../components/SavedViewsButton.js";
 import { apiFetch, ApiError } from "../lib/api.js";
 import { formatMoney, formatNumber } from "../lib/format.js";
 
-// Lazy-load chart components so the recharts bundle isn't pulled into the
-// initial dashboard render. Each chart is wrapped in a Suspense boundary
-// below so the page renders metric cards immediately.
 const RevenueOrdersChart = lazy(() => import("../components/charts/RevenueOrdersChart.js"));
 const SalesByDowChart = lazy(() => import("../components/charts/SalesByDowChart.js"));
 const MarginTrendChart = lazy(() => import("../components/charts/MarginTrendChart.js"));
@@ -45,45 +45,134 @@ type Props = {
   onNavigateToSettings: () => void;
 };
 
+function comparisonCaption(mode: ComparisonMode): string {
+  if (mode === "previous_year") return "vs. same period last year";
+  if (mode === "none") return "";
+  return "vs. previous period";
+}
+
+function buildOverviewUrl(
+  preset: DateRangePreset,
+  comparison: ComparisonMode,
+  customStart: string,
+  customEnd: string,
+  tags: string[],
+): string {
+  const params = new URLSearchParams({ preset, comparison });
+  if (preset === "custom" && customStart && customEnd) {
+    params.set("start", customStart);
+    params.set("end", customEnd);
+  }
+  if (tags.length > 0) params.set("tags", tags.join(","));
+  return `/api/metrics/overview?${params.toString()}`;
+}
+
 export function Dashboard({ onNavigateToSettings }: Props) {
   const [preset, setPreset] = useState<DateRangePreset>("last_30_days");
+  const [comparison, setComparison] = useState<ComparisonMode>("previous_period");
+  const [customStart, setCustomStart] = useState<string>("");
+  const [customEnd, setCustomEnd] = useState<string>("");
+  const [tagInput, setTagInput] = useState<string>("");
+  const [activeTags, setActiveTags] = useState<string[]>([]);
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const profit = useProfit(preset, "previous_period");
+  const isCustomReady = preset !== "custom" || (customStart !== "" && customEnd !== "");
+
+  function applyTags() {
+    const tags = tagInput.split(",").map((t) => t.trim()).filter(Boolean);
+    setActiveTags(tags);
+  }
+
+  function clearTags() {
+    setTagInput("");
+    setActiveTags([]);
+  }
+
+  const profit = useProfit(preset, comparison, customStart, customEnd);
   const returnReasons = useReturnReasons(preset);
   const currencyCode = data?.revenue.current.currency_code ?? "USD";
+  const caption = comparisonCaption(comparison);
 
-  const load = useCallback(async (p: DateRangePreset) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await apiFetch<OverviewResponse>(
-        `/api/metrics/overview?preset=${encodeURIComponent(p)}&comparison=previous_period`,
-      );
-      setData(result);
-    } catch (e) {
-      const message = e instanceof ApiError ? e.message : "Could not load metrics.";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (p: DateRangePreset, c: ComparisonMode, start: string, end: string, tags: string[]) => {
+      if (p === "custom" && (!start || !end)) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await apiFetch<OverviewResponse>(buildOverviewUrl(p, c, start, end, tags));
+        setData(result);
+      } catch (e) {
+        const message = e instanceof ApiError ? e.message : "Could not load metrics.";
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    void load(preset);
-  }, [load, preset]);
+    void load(preset, comparison, customStart, customEnd, activeTags);
+  }, [load, preset, comparison, customStart, customEnd, activeTags]);
 
   return (
     <Layout>
       <Layout.Section>
         <BlockStack gap="400">
-          <InlineStack align="space-between" blockAlign="center">
-            <Text as="h2" variant="headingLg">
-              Overview
-            </Text>
-            <RangePicker value={preset} onChange={setPreset} />
+          <InlineStack align="space-between" blockAlign="center" gap="200" wrap>
+            <InlineStack gap="300" blockAlign="center">
+              <Text as="h2" variant="headingLg">
+                Overview
+              </Text>
+              <SavedViewsButton />
+            </InlineStack>
+            <InlineStack gap="200" blockAlign="center" wrap>
+              <RangePicker value={preset} onChange={setPreset} />
+              {preset === "custom" && (
+                <>
+                  <TextField
+                    label="From"
+                    labelHidden
+                    type="date"
+                    value={customStart}
+                    onChange={setCustomStart}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="To"
+                    labelHidden
+                    type="date"
+                    value={customEnd}
+                    onChange={setCustomEnd}
+                    autoComplete="off"
+                  />
+                </>
+              )}
+              <ComparisonPicker value={comparison} onChange={setComparison} />
+            </InlineStack>
+          </InlineStack>
+
+          <InlineStack gap="200" blockAlign="end">
+            <Box minWidth="200px">
+              <TextField
+                label="Filter by tags"
+                labelHidden
+                placeholder="e.g. wholesale, vip (comma-separated)"
+                value={tagInput}
+                onChange={setTagInput}
+                autoComplete="off"
+                connectedRight={
+                  <Button onClick={applyTags} variant="secondary">Filter</Button>
+                }
+              />
+            </Box>
+            {activeTags.length > 0 && (
+              <Button onClick={clearTags} variant="plain" tone="critical">
+                {`Clear filter (${activeTags.join(", ")})`}
+              </Button>
+            )}
           </InlineStack>
 
           {error ? (
@@ -132,15 +221,15 @@ export function Dashboard({ onNavigateToSettings }: Props) {
 
           <Grid>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              {loading || !data ? (
+              {loading || !data || !isCustomReady ? (
                 <SkeletonCard label="Revenue" />
               ) : (
                 <BlockStack gap="100">
                   <MetricCard
                     label="Revenue"
                     value={formatMoney(data.revenue.current)}
-                    delta={data.revenue.delta_pct}
-                    caption="vs previous period"
+                    delta={comparison !== "none" ? data.revenue.delta_pct : null}
+                    caption={caption}
                   />
                   <PendingReturnsHint
                     count={data.pending_returns?.count ?? 0}
@@ -150,38 +239,38 @@ export function Dashboard({ onNavigateToSettings }: Props) {
               )}
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              {loading || !data ? (
+              {loading || !data || !isCustomReady ? (
                 <SkeletonCard label="Orders" />
               ) : (
                 <MetricCard
                   label="Orders"
                   value={formatNumber(data.orders.current)}
-                  delta={data.orders.delta_pct}
-                  caption="vs previous period"
+                  delta={comparison !== "none" ? data.orders.delta_pct : null}
+                  caption={caption}
                 />
               )}
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              {loading || !data ? (
+              {loading || !data || !isCustomReady ? (
                 <SkeletonCard label="Average order value" />
               ) : (
                 <MetricCard
                   label="Average order value"
                   value={formatMoney(data.average_order_value.current)}
-                  delta={data.average_order_value.delta_pct}
-                  caption="vs previous period"
+                  delta={comparison !== "none" ? data.average_order_value.delta_pct : null}
+                  caption={caption}
                 />
               )}
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              {loading || !data ? (
+              {loading || !data || !isCustomReady ? (
                 <SkeletonCard label="Unique customers" />
               ) : (
                 <MetricCard
                   label="Unique customers"
                   value={formatNumber(data.unique_customers.current)}
-                  delta={data.unique_customers.delta_pct}
-                  caption="vs previous period"
+                  delta={comparison !== "none" ? data.unique_customers.delta_pct : null}
+                  caption={caption}
                 />
               )}
             </Grid.Cell>

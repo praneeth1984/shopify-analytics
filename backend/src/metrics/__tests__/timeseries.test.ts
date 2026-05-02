@@ -73,9 +73,19 @@ function makeOrder(args: {
           originalUnitPriceSet: {
             shopMoney: { amount: li.unitPrice, currencyCode: "USD" },
           },
+          originalTotalSet: {
+            shopMoney: {
+              amount: (parseFloat(li.unitPrice) * li.qty).toFixed(2),
+              currencyCode: "USD",
+            },
+          },
         },
       })),
     },
+    paymentGatewayNames: ["shopify_payments"],
+    discountCodes: [],
+    totalShippingPriceSet: { shopMoney: { amount: "0.00", currencyCode: "USD" } },
+    shippingLines: { edges: [] },
     refunds: [],
     returns: { edges: [] },
   };

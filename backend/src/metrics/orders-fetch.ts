@@ -53,8 +53,13 @@ async function fetchPage(
 export async function fetchOrdersForRange(
   graphql: GraphQLClient,
   range: { start: string; end: string },
+  tags: string[] = [],
 ): Promise<{ orders: OrderNode[]; truncated: boolean }> {
-  const q = `processed_at:>='${range.start}' processed_at:<'${range.end}'`;
+  let q = `processed_at:>='${range.start}' processed_at:<'${range.end}'`;
+  if (tags.length > 0) {
+    const tagClause = tags.map((t) => `tag:'${t.replace(/'/g, "")}'`).join(" OR ");
+    q += ` AND (${tagClause})`;
+  }
   const out: OrderNode[] = [];
   let after: string | null = null;
   let pages = 0;

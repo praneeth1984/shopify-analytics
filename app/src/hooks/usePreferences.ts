@@ -9,10 +9,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../lib/api.js";
+import type { GatewayRate } from "@fbc/shared";
 
 export type Preferences = {
   cogsBackupTipDismissed?: boolean;
-  // future: more boolean / scalar UI flags
+  gatewayRates?: GatewayRate[];
 };
 
 type Response = { preferences: Preferences };

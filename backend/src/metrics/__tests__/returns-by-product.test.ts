@@ -44,6 +44,9 @@ function makeOrder(args: {
         originalUnitPriceSet: {
           shopMoney: { amount: li.unitPrice, currencyCode: "USD" },
         },
+        originalTotalSet: {
+          shopMoney: { amount: (parseFloat(li.unitPrice) * li.qty).toFixed(2), currencyCode: "USD" },
+        },
       },
     })),
   };
@@ -59,6 +62,7 @@ function makeOrder(args: {
           {
             node: {
               quantity: rl.qty,
+              subtotalSet: null,
               lineItem: li
                 ? {
                     id: li.liId,
@@ -92,6 +96,10 @@ function makeOrder(args: {
     totalRefundedSet: {
       shopMoney: { amount: args.refunded ?? "0.00", currencyCode: "USD" },
     },
+    paymentGatewayNames: ["shopify_payments"],
+    discountCodes: [],
+    totalShippingPriceSet: { shopMoney: { amount: "0.00", currencyCode: "USD" } },
+    shippingLines: { edges: [] },
     customer: null,
     lineItems,
     refunds,

@@ -44,6 +44,27 @@ export const ORDERS_OVERVIEW_QUERY = /* GraphQL */ `
             currencyCode
           }
         }
+        paymentGatewayNames
+        discountCodes
+        totalShippingPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        shippingLines(first: 5) {
+          edges {
+            node {
+              source
+              discountedPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+            }
+          }
+        }
         customer {
           id
           numberOfOrders
@@ -74,6 +95,12 @@ export const ORDERS_OVERVIEW_QUERY = /* GraphQL */ `
                   currencyCode
                 }
               }
+              originalTotalSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
             }
           }
         }
@@ -90,6 +117,12 @@ export const ORDERS_OVERVIEW_QUERY = /* GraphQL */ `
             edges {
               node {
                 quantity
+                subtotalSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
                 lineItem {
                   id
                   product {
@@ -132,10 +165,12 @@ export type LineItemNode = {
   product: { id: string; title: string } | null;
   discountedUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   originalUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  originalTotalSet: { shopMoney: { amount: string; currencyCode: string } };
 };
 
 export type RefundLineItemNode = {
   quantity: number;
+  subtotalSet: { shopMoney: { amount: string; currencyCode: string } } | null;
   lineItem: {
     id: string;
     product: { id: string; title: string } | null;
@@ -169,6 +204,11 @@ export type OrderReturnStatus =
   | "INSPECTION_COMPLETE"
   | string;
 
+export type ShippingLineNode = {
+  source: string | null;
+  discountedPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+};
+
 export type OrderNode = {
   id: string;
   processedAt: string;
@@ -177,6 +217,10 @@ export type OrderNode = {
   currentTotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   currentSubtotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  paymentGatewayNames: string[];
+  discountCodes: string[];
+  totalShippingPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  shippingLines: { edges: Array<{ node: ShippingLineNode }> };
   customer: { id: string; numberOfOrders: number } | null;
   lineItems: { edges: Array<{ node: LineItemNode }> };
   refunds: RefundNode[];
@@ -276,4 +320,39 @@ export type GeoOrderNode = {
   totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   customer: { id: string } | null;
   shippingAddress: GeoOrderShippingAddress | null;
+};
+
+/**
+ * Inventory velocity query — fetches product variants with stock levels.
+ * Uses productVariants connection (separate from orders), paginated.
+ * Capped at 250 variants per page, max 40 pages (10,000 variants budget).
+ */
+export const INVENTORY_VARIANTS_QUERY = /* GraphQL */ `
+  query InventoryVariants($first: Int!, $after: String) {
+    productVariants(first: $first, after: $after) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        title
+        sku
+        product {
+          id
+          title
+          status
+        }
+        inventoryQuantity
+      }
+    }
+  }
+`;
+
+export type InventoryVariantNode = {
+  id: string;
+  title: string;
+  sku: string | null;
+  product: { id: string; title: string; status: string } | null;
+  inventoryQuantity: number | null;
 };

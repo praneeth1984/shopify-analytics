@@ -36,6 +36,7 @@ import { CogsBackupCard } from "../components/CogsBackupCard.js";
 import { DefaultMarginField } from "../components/DefaultMarginField.js";
 import { VariantSearch } from "../components/VariantSearch.js";
 import { showToast } from "../lib/toast.js";
+import { ExpensesCard } from "../components/ExpensesCard.js";
 
 export function Settings() {
   const cogs = useCogs();
@@ -263,6 +264,8 @@ export function Settings() {
             </BlockStack>
 
             <CogsBackupCard onImported={() => cogs.reload()} />
+
+            <ExpensesCard />
           </BlockStack>
         </Layout.Section>
       </Layout>

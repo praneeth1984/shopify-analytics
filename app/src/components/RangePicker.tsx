@@ -9,6 +9,7 @@ const OPTIONS: { label: string; value: DateRangePreset }[] = [
   { label: "Last 90 days", value: "last_90_days" },
   { label: "Month to date", value: "month_to_date" },
   { label: "Year to date", value: "year_to_date" },
+  { label: "Custom range", value: "custom" },
 ];
 
 type Props = {
