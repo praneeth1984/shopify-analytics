@@ -22,7 +22,8 @@ import { log } from "./lib/logger.js";
 // Allowed origins for CORS. The embedded app is served from Cloudflare Pages;
 // Shopify admin iframes it so fetch() requests carry the Pages origin.
 const ALLOWED_ORIGINS = [
-  "https://fbc-shopify-app.pages.dev",
+  "https://firstbridge-analytics.pages.dev",
+  "https://fbc-shopify-app.pages.dev",   // legacy, keep during transition
   "https://admin.shopify.com",
   // Dev origins
   "http://localhost:5173",
@@ -38,7 +39,8 @@ export function createApp() {
     cors({
       origin: (origin) => {
         if (ALLOWED_ORIGINS.includes(origin)) return origin;
-        // Allow Cloudflare Pages preview deployments (*.fbc-shopify-app.pages.dev)
+        // Allow Cloudflare Pages preview deployments
+        if (/^https:\/\/[a-z0-9-]+\.firstbridge-analytics\.pages\.dev$/.test(origin)) return origin;
         if (/^https:\/\/[a-z0-9-]+\.fbc-shopify-app\.pages\.dev$/.test(origin)) return origin;
         // Allow any *.trycloudflare.com tunnel (dev CLI)
         if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(origin)) return origin;
