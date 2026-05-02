@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — FirstBridge Analytics</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #202223;
+      background: #f6f6f7;
+      line-height: 1.7;
+    }
+    .wrapper {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px 96px;
+    }
+    header {
+      border-bottom: 1px solid #e1e3e5;
+      padding-bottom: 24px;
+      margin-bottom: 40px;
+    }
+    header .brand {
+      font-size: 13px;
+      font-weight: 600;
+      color: #6d7175;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    h1 { font-size: 28px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .meta { font-size: 14px; color: #6d7175; }
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin: 36px 0 12px;
+      padding-top: 4px;
+    }
+    p { margin-bottom: 14px; font-size: 15px; }
+    ul { margin: 0 0 14px 20px; font-size: 15px; }
+    ul li { margin-bottom: 6px; }
+    a { color: #008060; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .card {
+      background: #fff;
+      border: 1px solid #e1e3e5;
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin-bottom: 8px;
+    }
+    .highlight {
+      background: #f0faf5;
+      border: 1px solid #b3dfc9;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin: 16px 0 20px;
+      font-size: 14px;
+      color: #0d5034;
+    }
+    footer {
+      margin-top: 60px;
+      border-top: 1px solid #e1e3e5;
+      padding-top: 24px;
+      font-size: 13px;
+      color: #6d7175;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header>
+      <div class="brand">FirstBridge Analytics</div>
+      <h1>Privacy Policy</h1>
+      <p class="meta">Last updated: May 2, 2026 &nbsp;·&nbsp; Effective: May 2, 2026</p>
+    </header>
+
+    <div class="card">
+      <div class="highlight">
+        Short version: We process your Shopify store data to show you analytics. We do not sell your data, do not store raw order records, and do not share anything with third parties beyond what it takes to run the app (Cloudflare for hosting, OpenStreetMap for map tiles). All configuration data lives in your own Shopify store as metafields.
+      </div>
+
+      <h2>1. Who we are</h2>
+      <p>
+        FirstBridge Analytics ("we", "us", "our") is a Shopify app built and operated by
+        <strong>First Bridge Consulting</strong> (<a href="https://firstbridgeconsulting.com" target="_blank" rel="noopener">firstbridgeconsulting.com</a>).
+        We build practical analytics tools for Shopify merchants. FirstBridge Analytics is our
+        flagship product — a free-to-start sales analytics, profit tracking, and geographic
+        insights app designed for growing Shopify stores.
+      </p>
+      <p>Contact: <a href="mailto:support@firstbridgeconsulting.com">support@firstbridgeconsulting.com</a></p>
+
+      <h2>2. What data we access</h2>
+      <p>When you install FirstBridge Analytics we request these Shopify API scopes:</p>
+      <ul>
+        <li><strong>read_orders</strong> — order totals, dates, refunds, and return status for analytics aggregation.</li>
+        <li><strong>read_customers</strong> — customer IDs only, to compute unique-customer counts. We never read names, emails, or addresses.</li>
+        <li><strong>read_products</strong> — product IDs and titles for the Top Products report.</li>
+        <li><strong>read_inventory</strong> — inventory levels for the Inventory at Risk view.</li>
+        <li><strong>read_reports</strong> — used for traffic source data.</li>
+        <li><strong>read_returns</strong> — return reason codes for the Returns analytics panel.</li>
+      </ul>
+      <p>Access to shipping address country/region data (used in Geographic Analytics) is covered by the
+        <em>Analytics</em> use case under Shopify's Protected Customer Data framework. We request only
+        the minimum fields needed and never read individual customer contact details.</p>
+
+      <h2>3. How we use the data</h2>
+      <p>All order data is processed <strong>in real time on our servers</strong> to produce
+        aggregated metrics (totals, averages, percentages). The raw order records are never
+        written to any database or third-party service. The only data we persist are:</p>
+      <ul>
+        <li><strong>Your COGS / cost settings</strong> — stored in a Shopify metafield in your own store
+          under the namespace <code>firstbridge_analytics</code>. You can delete them by uninstalling the app.</li>
+        <li><strong>Your preferences</strong> (e.g., dismissed banners, default date range) — also stored as
+          a Shopify metafield in your store.</li>
+        <li><strong>Plan cache</strong> — a 30-second ephemeral cache key in Cloudflare KV recording whether
+          your plan is Free or Pro. It is invalidated when you change or cancel your subscription.</li>
+      </ul>
+      <p>We do <strong>not</strong> build merchant profiles, sell data, or use your store data
+        to train machine-learning models.</p>
+
+      <h2>4. Geographic Analytics and map tiles</h2>
+      <p>
+        The Geographic Analytics map is rendered by Leaflet in your browser using
+        <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> tile images.
+        When you view the map, your browser fetches tile images directly from OpenStreetMap servers.
+        This means OpenStreetMap may log your browser's IP address. We have no control over
+        OpenStreetMap's data practices; see their
+        <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener">privacy policy</a>.
+      </p>
+      <p>
+        Heat-map data we return is pre-aggregated by country (Free plan) or 0.1° grid cell (~11 km, Pro plan).
+        Individual order coordinates are never sent to your browser.
+      </p>
+
+      <h2>5. Infrastructure and sub-processors</h2>
+      <ul>
+        <li><strong>Cloudflare, Inc.</strong> — our backend runs on Cloudflare Workers and Cloudflare Pages.
+          Request metadata (IP, URL, timestamps) may appear in Cloudflare's access logs per their
+          <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">privacy policy</a>.
+          Data is not transferred outside the standard Cloudflare infrastructure.</li>
+        <li><strong>Shopify, Inc.</strong> — all data originates in and is returned to your Shopify store.
+          Shopify's own privacy policy governs their handling of your store data.</li>
+        <li><strong>OpenStreetMap Foundation</strong> — map tile images only, as described above.</li>
+      </ul>
+      <p>We do not use Google Analytics, Facebook Pixel, Segment, or any other analytics or
+        advertising platform on either the app or this website.</p>
+
+      <h2>6. Data retention and deletion</h2>
+      <p>
+        When you uninstall FirstBridge Analytics, Shopify automatically removes all app-owned
+        metafields from your store. The 30-second KV plan cache is purged by our
+        <code>app/uninstalled</code> webhook handler immediately on uninstall.
+        No other merchant data is held by us beyond that point.
+      </p>
+
+      <h2>7. GDPR and merchant customer data requests</h2>
+      <p>
+        We implement all mandatory Shopify GDPR webhooks:
+      </p>
+      <ul>
+        <li><strong>customers/data_request</strong> — we hold no individually identifiable customer data;
+          we acknowledge the request.</li>
+        <li><strong>customers/redact</strong> — same; we acknowledge.</li>
+        <li><strong>shop/redact</strong> — we purge any remaining ephemeral state for the shop.</li>
+      </ul>
+      <p>
+        Because we store only aggregated counts and your own configuration (not customer records),
+        there is no individual customer data to export or erase on our side.
+      </p>
+
+      <h2>8. Cookies and local storage</h2>
+      <p>
+        FirstBridge Analytics does not set any cookies. The Shopify App Bridge SDK may use
+        browser session storage to manage the embedded-app session token; this is governed by
+        Shopify's own terms.
+      </p>
+
+      <h2>9. Security</h2>
+      <p>
+        All traffic between your browser, our backend, and Shopify's API is encrypted via TLS 1.3.
+        Session tokens are Shopify-signed JWTs verified on every request using HMAC-SHA256.
+        We do not persist access tokens anywhere.
+      </p>
+
+      <h2>10. Changes to this policy</h2>
+      <p>
+        We may update this policy when we add new features or sub-processors. Material changes
+        will be communicated via the Shopify Partner email associated with your store.
+        The "Last updated" date at the top reflects the most recent revision.
+      </p>
+
+      <h2>11. Contact</h2>
+      <p>
+        Questions or data requests: <a href="mailto:support@firstbridgeconsulting.com">support@firstbridgeconsulting.com</a><br>
+        First Bridge Consulting &nbsp;·&nbsp; <a href="https://firstbridgeconsulting.com" target="_blank" rel="noopener">firstbridgeconsulting.com</a>
+      </p>
+    </div>
+
+    <footer>
+      &copy; 2026 First Bridge Consulting &nbsp;·&nbsp;
+      <a href="https://firstbridgeconsulting.com" target="_blank" rel="noopener">firstbridgeconsulting.com</a>
+    </footer>
+  </div>
+</body>
+</html>
