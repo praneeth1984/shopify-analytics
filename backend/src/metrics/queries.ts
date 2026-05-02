@@ -180,6 +180,7 @@ export type OrderNode = {
   customer: { id: string; numberOfOrders: number } | null;
   lineItems: { edges: Array<{ node: LineItemNode }> };
   refunds: RefundNode[];
+  returns?: { edges: Array<unknown> };
 };
 
 /** Lightweight query used only by the returns-reasons endpoint.

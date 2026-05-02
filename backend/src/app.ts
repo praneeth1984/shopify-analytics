@@ -16,6 +16,7 @@ import { metricsReturnsRoutes } from "./routes/metrics-returns.js";
 import { metricsGeographyRoutes } from "./routes/metrics-geography.js";
 import { cogsRoutes } from "./routes/cogs.js";
 import { preferencesRoutes } from "./routes/preferences.js";
+import { billingRoutes } from "./routes/billing.js";
 import { HttpError } from "./lib/errors.js";
 import { log } from "./lib/logger.js";
 
@@ -61,6 +62,7 @@ export function createApp() {
   app.route("/api/metrics/returns", metricsReturnsRoutes());
   app.route("/api/metrics/geography", metricsGeographyRoutes());
   app.route("/api/metrics", metricsRoutes());
+  app.route("/api/billing", billingRoutes());
   app.route("/api/cogs", cogsRoutes());
   app.route("/api/preferences", preferencesRoutes());
 

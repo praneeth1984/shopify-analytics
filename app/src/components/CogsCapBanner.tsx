@@ -4,8 +4,9 @@
  * never blocks editing existing entries.
  */
 
-import { Banner, Text } from "@shopify/polaris";
+import { Banner, BlockStack, Button, InlineStack, Text } from "@shopify/polaris";
 import type { Plan } from "@fbc/shared";
+import { navigate } from "../App.js";
 
 type Props = {
   plan: Plan;
@@ -20,10 +21,17 @@ export function CogsCapBanner({ plan, used, cap }: Props) {
 
   return (
     <Banner tone="info" title={`You've reached ${cap} of ${cap} costs on the Free plan`}>
-      <Text as="p">
-        Existing costs keep working and your profit numbers stay accurate. To add costs for
-        more products, upgrade to Pro for unlimited SKUs and full history.
-      </Text>
+      <BlockStack gap="200">
+        <Text as="p">
+          Existing costs keep working and your profit numbers stay accurate. To add costs for
+          more products, upgrade to Pro for unlimited SKUs and full history.
+        </Text>
+        <InlineStack>
+          <Button variant="primary" onClick={() => navigate("/billing")}>
+            Upgrade to Pro
+          </Button>
+        </InlineStack>
+      </BlockStack>
     </Banner>
   );
 }

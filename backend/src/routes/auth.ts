@@ -14,7 +14,7 @@ import { registerRuntimeWebhooks } from "../shopify/webhook-register.js";
 import { BadRequest } from "../lib/errors.js";
 import { log } from "../lib/logger.js";
 
-const SCOPES = "read_products,read_orders,read_customers,read_inventory,read_reports";
+const SCOPES = "read_products,read_orders,read_all_orders,read_customers,read_inventory,read_reports,read_returns";
 
 function randomState(): string {
   const bytes = new Uint8Array(16);

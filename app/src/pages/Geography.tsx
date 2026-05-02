@@ -25,6 +25,7 @@ import {
 import type { DateRangePreset, RegionRow } from "@fbc/shared";
 import { useGeography } from "../hooks/useGeography.js";
 import { formatMoney, formatNumber } from "../lib/format.js";
+import { navigate } from "../App.js";
 
 const GeographyMap = lazy(() => import("../components/geography/GeographyMap.js"));
 
@@ -223,14 +224,24 @@ export function Geography() {
               />
             </Box>
             {data?.truncated && (
-              <Text as="span" variant="bodySm" tone="caution">
-                Partial results — capped at 2,500 orders. Upgrade to Pro for full history.
-              </Text>
+              <InlineStack gap="200" blockAlign="center">
+                <Text as="span" variant="bodySm" tone="caution">
+                  Partial results — capped at 2,500 orders.
+                </Text>
+                <Button variant="plain" onClick={() => navigate("/billing")}>
+                  Upgrade to Pro
+                </Button>
+              </InlineStack>
             )}
             {data?.history_clamped_to && (
-              <Text as="span" variant="bodySm" tone="caution">
-                Showing 90-day window (Free plan). Upgrade to Pro for full history.
-              </Text>
+              <InlineStack gap="200" blockAlign="center">
+                <Text as="span" variant="bodySm" tone="caution">
+                  Showing 90-day window (Free plan).
+                </Text>
+                <Button variant="plain" onClick={() => navigate("/billing")}>
+                  Upgrade to Pro
+                </Button>
+              </InlineStack>
             )}
           </InlineStack>
         </Card>
@@ -322,10 +333,17 @@ export function Geography() {
 
             {!isPro && (
               <Banner tone="info">
-                <Text as="p">
-                  <strong>Free plan:</strong> country and state breakdown only.
-                  Upgrade to Pro for city-level rows, full heat map precision, and unlimited history.
-                </Text>
+                <BlockStack gap="200">
+                  <Text as="p">
+                    <strong>Free plan:</strong> country and state breakdown only.
+                    Upgrade to Pro for city-level rows, full heat map precision, and unlimited history.
+                  </Text>
+                  <InlineStack>
+                    <Button variant="plain" onClick={() => navigate("/billing")}>
+                      Upgrade to Pro
+                    </Button>
+                  </InlineStack>
+                </BlockStack>
               </Banner>
             )}
 

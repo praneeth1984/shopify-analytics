@@ -40,6 +40,7 @@ export type ReturnReasonsData = {
   reasons: ReturnReasonRow[];
   total_returned_units: number;
   truncated: boolean;
+  scope_missing?: boolean;
 };
 
 /** Pure aggregation — exported for unit tests. */

@@ -3,6 +3,7 @@ import {
   Banner,
   BlockStack,
   Box,
+  Button,
   Grid,
   InlineStack,
   Layout,
@@ -11,6 +12,8 @@ import {
   Text,
 } from "@shopify/polaris";
 import type { DateRangePreset, OverviewMetrics } from "@fbc/shared";
+
+import { navigate } from "../App.js";
 
 import { MetricCard } from "../components/MetricCard.js";
 import { RangePicker } from "../components/RangePicker.js";
@@ -97,10 +100,17 @@ export function Dashboard({ onNavigateToSettings }: Props) {
 
           {profit.data?.history_clamped_to ? (
             <Banner tone="info" title="Showing the last 90 days on Free">
-              <p>
-                Profit history is capped at 90 days on the Free plan. Upgrade to Pro for
-                unlimited history.
-              </p>
+              <BlockStack gap="200">
+                <Text as="p">
+                  Profit history is capped at 90 days on the Free plan. Upgrade to Pro for
+                  unlimited history.
+                </Text>
+                <InlineStack>
+                  <Button variant="plain" onClick={() => navigate("/billing")}>
+                    Upgrade to Pro
+                  </Button>
+                </InlineStack>
+              </BlockStack>
             </Banner>
           ) : null}
 

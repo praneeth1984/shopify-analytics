@@ -86,9 +86,14 @@ export function derivePlan(subs: ActiveSubscription[]): Plan {
   if (active.length === 0) return "free";
 
   const lc = (s: string) => (s ?? "").toLowerCase();
-  if (active.some((s) => lc(s.name).startsWith("insights"))) return "insights";
-  if (active.some((s) => lc(s.name).startsWith("pro"))) return "pro";
-  return "free";
+  if (active.some((s) => lc(s.name).includes("insights"))) return "insights";
+  // Managed Pricing plan names come from the Partner Dashboard. Use `includes`
+  // rather than `startsWith` to be resilient to any naming variation. Any
+  // active subscription that isn't insights is treated as Pro — this app has
+  // exactly two tiers.
+  if (active.some((s) => lc(s.name).includes("pro"))) return "pro";
+  // Fallback: any unrecognised active subscription still means a paid tier.
+  return "pro";
 }
 
 function isPlan(v: unknown): v is Plan {
@@ -115,6 +120,7 @@ export async function fetchPlanFromBilling(graphql: GraphQLClient): Promise<Plan
     currentAppInstallation: { activeSubscriptions: ActiveSubscription[] } | null;
   }>(ACTIVE_SUBSCRIPTIONS_QUERY);
   const subs = data.currentAppInstallation?.activeSubscriptions ?? [];
+  log.info("plan.billing_api_subs", { count: subs.length, subs: subs.map((s) => ({ name: s.name, status: s.status })) });
   return derivePlan(subs);
 }
 
@@ -198,6 +204,13 @@ export async function getPlan(graphql: GraphQLClient): Promise<Plan> {
 export async function getPlanCached(c: Context<{ Bindings: Env }>): Promise<Plan> {
   const memoised = c.get("plan");
   if (memoised) return memoised;
+
+  // DEV OVERRIDE: set FORCE_PLAN=pro in .dev.vars to bypass Billing API locally.
+  // Never set in production; presence of the var is the signal.
+  if (c.env.FORCE_PLAN && isPlan(c.env.FORCE_PLAN)) {
+    c.set("plan", c.env.FORCE_PLAN);
+    return c.env.FORCE_PLAN;
+  }
 
   const graphql = c.get("graphql");
   const shopDomain = c.get("shopDomain");

@@ -17,6 +17,10 @@ export type Env = {
   SHOPIFY_APP_URL: string;
   ANTHROPIC_API_KEY?: string;
 
+  // Dev-only override — set in .dev.vars to bypass Billing API plan resolution.
+  // Never set in production; its presence is the signal, no ENVIRONMENT check needed.
+  FORCE_PLAN?: string;
+
   // Bindings — see wrangler.toml. Used for ephemeral cross-request state only:
   //   - plan:{shop_domain}        30s Billing-API plan cache
   //   - bulk:{shop_domain}:{...}  bulk-operation polling cursors (Phase 1.5)
