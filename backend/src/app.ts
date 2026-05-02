@@ -5,6 +5,7 @@
  */
 
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Env } from "./env.js";
 import { authRoutes } from "./routes/auth.js";
@@ -18,8 +19,36 @@ import { preferencesRoutes } from "./routes/preferences.js";
 import { HttpError } from "./lib/errors.js";
 import { log } from "./lib/logger.js";
 
+// Allowed origins for CORS. The embedded app is served from Cloudflare Pages;
+// Shopify admin iframes it so fetch() requests carry the Pages origin.
+const ALLOWED_ORIGINS = [
+  "https://fbc-shopify-app.pages.dev",
+  "https://admin.shopify.com",
+  // Dev origins
+  "http://localhost:5173",
+  "http://localhost:5174",
+];
+
 export function createApp() {
   const app = new Hono<{ Bindings: Env }>();
+
+  // CORS — must come before all routes so OPTIONS preflights are handled first.
+  app.use(
+    "/api/*",
+    cors({
+      origin: (origin) => {
+        if (ALLOWED_ORIGINS.includes(origin)) return origin;
+        // Allow Cloudflare Pages preview deployments (*.fbc-shopify-app.pages.dev)
+        if (/^https:\/\/[a-z0-9-]+\.fbc-shopify-app\.pages\.dev$/.test(origin)) return origin;
+        // Allow any *.trycloudflare.com tunnel (dev CLI)
+        if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(origin)) return origin;
+        return null;
+      },
+      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowHeaders: ["Authorization", "Content-Type"],
+      maxAge: 86400,
+    }),
+  );
 
   app.get("/health", (c) => c.json({ ok: true }));
 
