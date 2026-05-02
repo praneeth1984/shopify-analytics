@@ -325,6 +325,78 @@ What ships in the repo right now:
   bare numbers — to match Shopify's GraphQL types.
 - **No telemetry / analytics on the merchant by default.** Privacy is part of the value prop.
 
+## Development Practices
+
+### Separation of Concerns
+- Each module does one thing: route handlers validate + delegate; transformers aggregate;
+  formatters format. Never mix concerns in the same file.
+- Backend route files own only request parsing, auth checks, and response shaping —
+  business logic lives in `metrics/` or `lib/`.
+- Frontend pages own layout and state orchestration; extract data-fetching into custom
+  hooks (`hooks/`) and presentation into components (`components/`).
+
+### File Size & Module Boundaries
+- **Aim for ≤200 lines per file.** When a file grows past that, split it along its natural
+  seams (e.g. `timeseries.ts` → `timeseries-buckets.ts` + `timeseries-format.ts`).
+- One exported "thing" per file is the default. Multiple small exports in one file are fine
+  when they are tightly coupled; unrelated helpers must live in separate modules.
+- Every new module gets its own Vitest test file.
+
+### Constants
+- Magic numbers and magic strings are forbidden. Name every threshold, limit, and sentinel:
+  ```ts
+  // backend/src/metrics/orders-fetch.ts
+  const PAGE_SIZE = 250;
+  const MAX_PAGES = 10; // 2,500-order synchronous budget
+  ```
+- Plan limits (`FREE_COGS_CAP = 20`, `FREE_HISTORY_DAYS = 90`) live in `shared/src/index.ts`
+  so frontend and backend stay in sync.
+- HTTP status codes use named constants from `lib/errors.ts`, not bare numbers.
+
+### Performance
+- **Avoid redundant Admin API calls.** The overview and profit endpoints share one paginated
+  order fetch; returns endpoints that can reuse those orders do so.
+- **Aggregate in BigInt on the server; send formatted strings to the client.** Never send
+  raw minor-unit integers across the wire.
+- **Lazy-load heavy UI chunks.** Recharts is split into its own Vite chunk via `manualChunks`;
+  apply the same pattern to any new chart library or large dependency.
+- **Cap unbounded loops.** Every pagination loop must have a `MAX_PAGES` guard. Document the
+  maximum record count the cap implies.
+- **Memoize expensive derived values** in React components with `useMemo`; stabilise
+  callbacks with `useCallback` when passed to child components that use `React.memo`.
+
+### Exception Handling & Logging
+- All errors must be instances of typed classes from `lib/errors.ts`
+  (`HttpError`, `Unauthorized`, `Forbidden`, `BadRequest`, `Upstream`). Never throw plain
+  `Error` objects from route or metric code.
+- Catch at the boundary (Hono route handler or top-level hook); let typed errors propagate
+  naturally below that boundary.
+- Every `catch` block must either re-throw a typed error or log + return a structured error
+  response. Silent swallowing is forbidden.
+- Use the PII-redacting logger in `lib/logger.ts` everywhere — never `console.log` in
+  production code.
+- Log at the right level: `info` for lifecycle events, `warn` for recoverable anomalies
+  (e.g. partial results), `error` for unexpected failures. Include `shop` and `requestId`
+  on every log line.
+- Frontend API errors surface via `ApiError` (from `lib/api.ts`); components must handle
+  error state visibly (Polaris `Banner` with status `critical`) — no silent failures.
+
+### UI & Usability
+- **Polaris first.** Use Polaris components for every UI element; custom CSS is a last
+  resort and must be scoped.
+- **Skeleton states for every async load.** No blank panels while data fetches.
+- **Inline feedback, not modals.** Errors, warnings, and limit banners appear inline near
+  the relevant control — never as blocking modals (except destructive-action confirmation).
+- **Progressive disclosure.** Show the headline number first; reveal detail on demand
+  (expand / tooltip / drawer). Keep the default view scannable in under 10 seconds.
+- **Accessible by default.** All interactive elements need ARIA labels; colour is never the
+  only visual indicator; focus management follows Polaris conventions.
+- **Empty states must explain the next action.** An empty chart or table must tell the
+  merchant why it is empty and what to do (e.g. "No orders in this date range — try
+  expanding the range").
+- **Date ranges update immediately** (optimistic UI with loading indicator); never require
+  a separate "Apply" button.
+
 ## Testing Expectations
 
 - Every metric transformer (`backend/src/metrics/*`) needs unit tests with realistic GraphQL
