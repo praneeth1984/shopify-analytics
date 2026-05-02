@@ -13,6 +13,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 SHOPIFY_API_VERSION = "2026-04"
 ENVIRONMENT = "production"
+SHOPIFY_APP_HANDLE = "firstbridge-analytics"
 
 # KV is used only for ephemeral cross-request state.
 # Current uses (all under short keys, scoped per shop):

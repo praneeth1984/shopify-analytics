@@ -44,7 +44,8 @@ export function billingRoutes(authOverride?: ReturnType<typeof requireSessionTok
     // admin.shopify.com propagates query params into the iframe, so
     // consumeBillingReturnParam() in App.tsx detects ?billing=success.
     const shopAlias = shopDomain.replace(/\.myshopify\.com$/, "");
-    const returnUrl = `https://admin.shopify.com/store/${shopAlias}/apps/firstbridge-analytics?billing=success`;
+    const appHandle = c.env.SHOPIFY_APP_HANDLE;
+    const returnUrl = `https://admin.shopify.com/store/${shopAlias}/apps/${appHandle}?billing=success`;
     const pricingUrl = `https://${shopDomain}/admin/charges/${apiKey}/pricing_plans?return_url=${encodeURIComponent(returnUrl)}`;
     log.info("billing.manage_redirect", { pricingUrl });
     return c.json({ pricingUrl });

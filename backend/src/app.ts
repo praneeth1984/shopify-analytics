@@ -27,13 +27,14 @@ import { devSeedRoutes } from "./routes/dev-seed.js";
 import { HttpError } from "./lib/errors.js";
 import { log } from "./lib/logger.js";
 
-// Allowed origins for CORS. The embedded app is served from Cloudflare Pages;
-// Shopify admin iframes it so fetch() requests carry the Pages origin.
-const ALLOWED_ORIGINS = [
+// Production-only allowed origins. Never includes dev tunnels or localhost.
+const PROD_ORIGINS = [
   "https://firstbridge-analytics.pages.dev",
   "https://fbc-shopify-app.pages.dev",   // legacy, keep during transition
   "https://admin.shopify.com",
-  // Dev origins
+];
+
+const DEV_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:5174",
 ];
@@ -45,13 +46,15 @@ export function createApp() {
   app.use(
     "/api/*",
     cors({
-      origin: (origin) => {
-        if (ALLOWED_ORIGINS.includes(origin)) return origin;
-        // Allow Cloudflare Pages preview deployments
+      origin: (origin, c) => {
+        const isProd = c.env.ENVIRONMENT === "production";
+        if (PROD_ORIGINS.includes(origin)) return origin;
+        // Allow Cloudflare Pages preview deployments (both envs)
         if (/^https:\/\/[a-z0-9-]+\.firstbridge-analytics\.pages\.dev$/.test(origin)) return origin;
         if (/^https:\/\/[a-z0-9-]+\.fbc-shopify-app\.pages\.dev$/.test(origin)) return origin;
-        // Allow any *.trycloudflare.com tunnel (dev CLI)
-        if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(origin)) return origin;
+        // Dev-only: localhost and trycloudflare tunnels
+        if (!isProd && DEV_ORIGINS.includes(origin)) return origin;
+        if (!isProd && /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(origin)) return origin;
         return null;
       },
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
