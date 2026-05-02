@@ -28,7 +28,7 @@ export function CogsCapBanner({ plan, used, cap }: Props) {
         </Text>
         <InlineStack>
           <Button variant="primary" onClick={() => navigate("/billing")}>
-            Upgrade to Pro
+            View plans
           </Button>
         </InlineStack>
       </BlockStack>

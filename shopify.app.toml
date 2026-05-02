@@ -8,7 +8,7 @@ application_url = "https://firstbridge-analytics.pages.dev"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false
 
 [access_scopes]
 # read_orders requires Protected Customer Data approval in the Partner dashboard.

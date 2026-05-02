@@ -1,118 +1,118 @@
 /**
- * Billing page — current plan, plan comparison, and Manage plan CTA.
+ * Plan & Billing page — current plan overview and upcoming tier roadmap.
  *
- * Uses Shopify Managed Pricing: upgrade, downgrade, and cancellation are all
- * handled on Shopify's own pricing page. This page shows the merchant what
- * they have and provides a single entry point to change it.
+ * Pro and AI plans are shown as "Coming Soon" — billing is not yet active.
+ * The page is informational only until managed pricing is enabled post-submission.
  */
 
-import { useCallback, useState } from "react";
 import {
-  Badge, Banner, BlockStack, Box, Button, Card, InlineStack,
-  Layout, List, Page, Spinner, Text,
+  Badge, BlockStack, Box, Card, InlineStack,
+  Layout, List, Page, Text,
 } from "@shopify/polaris";
-import { useBilling } from "../hooks/useBilling.js";
 
-const PRO_PRICE_LABEL = "$4.99 / month · 15-day free trial";
+type PlanCard = {
+  name: string;
+  price: string;
+  description: string;
+  features: string[];
+  current?: boolean;
+  comingSoon?: boolean;
+};
+
+const PLANS: PlanCard[] = [
+  {
+    name: "Free",
+    price: "$0",
+    description: "Everything most stores need to understand performance.",
+    features: [
+      "Revenue, orders, AOV, unique customers",
+      "Profit dashboard and top-product breakdown",
+      "Returns analytics",
+      "90 days of history",
+      "Manual cost entry for up to 20 SKUs",
+      "Country and state geography",
+    ],
+    current: true,
+  },
+  {
+    name: "Pro",
+    price: "$4.99 / month",
+    description: "Everything in Free, plus deeper history and detail.",
+    features: [
+      "Unlimited history",
+      "Unlimited per-variant cost entry",
+      "City-level geography and grid heat map",
+      "Daily auto-refresh of profit and returns",
+      "Cancel anytime — no annual lock-in",
+    ],
+    comingSoon: true,
+  },
+  {
+    name: "AI",
+    price: "$9.99 / month",
+    description: "Everything in Pro, plus AI-powered insights and recommendations.",
+    features: [
+      "Weekly AI performance brief",
+      "Anomaly detection and alerts",
+      "Peer benchmarks vs. similar stores",
+      "Natural-language Q&A on your data",
+      "Priority support",
+    ],
+    comingSoon: true,
+  },
+];
 
 export function Billing() {
-  const billing = useBilling();
-  const [managing, setManaging] = useState(false);
-
-  const isPro = billing.plan === "pro";
-
-  const handleManage = useCallback(async () => {
-    setManaging(true);
-    try { await billing.manage(); } finally { setManaging(false); }
-  }, [billing]);
-
   return (
-    <Page title="Plan & Billing" subtitle="Manage your FirstBridge Analytics subscription.">
+    <Page
+      title="Plan & Billing"
+      subtitle="You're on the Free plan. Paid tiers are coming soon."
+    >
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
-            {billing.error ? (
-              <Banner tone="critical" title="Something went wrong">
-                <p>{billing.error}</p>
-              </Banner>
-            ) : null}
-
             <Card>
               <BlockStack gap="200">
                 <Text as="h2" variant="headingMd">Current plan</Text>
-                {billing.loading ? (
-                  <InlineStack gap="200" blockAlign="center">
-                    <Spinner accessibilityLabel="Loading current plan" size="small" />
-                    <Text as="span" tone="subdued">Checking your plan…</Text>
-                  </InlineStack>
-                ) : (
-                  <InlineStack gap="200" blockAlign="center">
-                    <Badge tone={isPro ? "success" : undefined}>
-                      {isPro ? "Pro" : "Free"}
-                    </Badge>
-                    <Text as="span" tone="subdued">
-                      {isPro ? PRO_PRICE_LABEL : "No charges"}
-                    </Text>
-                  </InlineStack>
-                )}
+                <InlineStack gap="200" blockAlign="center">
+                  <Badge tone="success">Free</Badge>
+                  <Text as="span" tone="subdued">No charges</Text>
+                </InlineStack>
               </BlockStack>
             </Card>
 
-            <Layout>
-              <Layout.Section variant="oneHalf">
-                <Card>
-                  <BlockStack gap="300">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="h3" variant="headingMd">Free</Text>
-                      <Text as="span" tone="subdued">$0</Text>
-                    </InlineStack>
-                    <Text as="p" tone="subdued">
-                      Everything most stores need to understand performance.
-                    </Text>
-                    <List type="bullet">
-                      <List.Item>Revenue, orders, AOV, unique customers</List.Item>
-                      <List.Item>Profit dashboard and top-product breakdown</List.Item>
-                      <List.Item>Returns analytics</List.Item>
-                      <List.Item>90 days of history</List.Item>
-                      <List.Item>Manual cost entry for up to 20 SKUs</List.Item>
-                      <List.Item>Country and state geography</List.Item>
-                    </List>
-                  </BlockStack>
-                </Card>
-              </Layout.Section>
+            <InlineStack gap="400" align="start" wrap>
+              {PLANS.map((plan) => (
+                <Box key={plan.name} minWidth="280px" maxWidth="360px">
+                  <Card>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between" blockAlign="center">
+                        <InlineStack gap="200" blockAlign="center">
+                          <Text as="h3" variant="headingMd">{plan.name}</Text>
+                          {plan.current && <Badge tone="success">Current</Badge>}
+                          {plan.comingSoon && <Badge>Coming Soon</Badge>}
+                        </InlineStack>
+                        <Text
+                          as="span"
+                          fontWeight={plan.comingSoon ? "semibold" : undefined}
+                          tone={plan.current ? "subdued" : undefined}
+                        >
+                          {plan.price}
+                        </Text>
+                      </InlineStack>
 
-              <Layout.Section variant="oneHalf">
-                <Card>
-                  <BlockStack gap="300">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="h3" variant="headingMd">Pro</Text>
-                      <Text as="span" fontWeight="semibold">$4.99 / month</Text>
-                    </InlineStack>
-                    <Text as="p" tone="subdued">
-                      Everything in Free, plus deeper history and detail.
-                    </Text>
-                    <List type="bullet">
-                      <List.Item>Unlimited history</List.Item>
-                      <List.Item>Unlimited per-variant cost entry</List.Item>
-                      <List.Item>City-level geography and grid heat map</List.Item>
-                      <List.Item>Daily auto-refresh of profit and returns</List.Item>
-                      <List.Item>Cancel anytime — no annual lock-in</List.Item>
-                    </List>
+                      <Text as="p" tone="subdued">{plan.description}</Text>
 
-                    <Box paddingBlockStart="200">
-                      <Button
-                        variant={isPro ? "secondary" : "primary"}
-                        onClick={handleManage}
-                        loading={managing}
-                        disabled={billing.loading}
-                      >
-                        {isPro ? "Manage plan" : `Upgrade to Pro — ${PRO_PRICE_LABEL}`}
-                      </Button>
-                    </Box>
-                  </BlockStack>
-                </Card>
-              </Layout.Section>
-            </Layout>
+                      <List type="bullet">
+                        {plan.features.map((f) => (
+                          <List.Item key={f}>{f}</List.Item>
+                        ))}
+                      </List>
+                    </BlockStack>
+                  </Card>
+                </Box>
+              ))}
+            </InlineStack>
           </BlockStack>
         </Layout.Section>
       </Layout>
