@@ -4,7 +4,7 @@
 client_id = "da5013ca68c07cace1f4bb8570b20af0"
 name = "FirstBridge Analytics"
 handle = "firstbridge-analytics"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://fbc-shopify-app.pages.dev"
 embedded = true
 
 [build]
@@ -17,7 +17,7 @@ scopes = "read_products,read_orders,read_customers,read_inventory,read_reports,r
 
 [auth]
 redirect_urls = [
-  "https://shopify.dev/apps/default-app-home/api/auth",
+  "https://fbc-shopify-backend.firstbridgeconsulting.workers.dev/auth/callback",
 ]
 
 [webhooks]
@@ -25,17 +25,17 @@ api_version = "2026-04"
 
 [[webhooks.subscriptions]]
 topics = ["app/uninstalled"]
-uri = "/webhooks/app/uninstalled"
+uri = "https://fbc-shopify-backend.firstbridgeconsulting.workers.dev/webhooks/app/uninstalled"
 
 [[webhooks.subscriptions]]
 # Plan changes are reflected in the KV `plan:{shop}` cache so the embedded app
 # sees them immediately. Source of truth remains the Billing API.
 topics = ["app_subscriptions/update"]
-uri = "/webhooks/app_subscriptions/update"
+uri = "https://fbc-shopify-backend.firstbridgeconsulting.workers.dev/webhooks/app_subscriptions/update"
 
 [[webhooks.subscriptions]]
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
-uri = "/webhooks/compliance"
+uri = "https://fbc-shopify-backend.firstbridgeconsulting.workers.dev/webhooks/compliance"
 
 [pos]
 embedded = false
