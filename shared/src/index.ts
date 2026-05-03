@@ -163,6 +163,79 @@ export type ReturnReasonsResponse = {
   history_clamped_to: HistoryClamp | null;
 };
 
+// ---- F43: Order Report ----
+
+export type OrderStatusFilter = "all" | "paid" | "pending" | "refunded" | "cancelled";
+export type FulfillmentFilter = "all" | "fulfilled" | "unfulfilled" | "partial";
+
+export type OrderRow = {
+  id: string; // numeric ID (Shopify GID suffix)
+  gid: string; // full Shopify GID, retained for any callers that need it
+  name: string; // e.g. "#1023"
+  created_at: string; // UTC ISO
+  channel: string | null;
+  payment_status: string | null;
+  fulfillment_status: string | null;
+  line_item_count: number;
+  gross_revenue: Money;
+  discounts: Money;
+  shipping: Money;
+  tax: Money;
+  net_revenue: Money;
+  gateway: string | null;
+  tags: string[];
+};
+
+export type OrderReportResponse = {
+  orders: OrderRow[];
+  cursor: string | null;
+  truncated: boolean;
+};
+
+// ---- F45: Refund Report ----
+
+export type RefundRow = {
+  refund_id: string;
+  order_id: string;
+  order_name: string;
+  refunded_at: string; // UTC ISO
+  amount: Money;
+  line_items_refunded: number;
+  restocked: boolean;
+  note: string | null;
+};
+
+export type RefundSummary = {
+  total_refunded: Money;
+  refund_count: number;
+  avg_refund: Money;
+  pct_of_gross_revenue: number; // 0..1
+};
+
+export type RefundReportResponse = {
+  summary: RefundSummary;
+  refunds: RefundRow[];
+  truncated: boolean;
+};
+
+// ---- F47: Order vs Return Monthly ----
+
+export type MonthlyReturnRow = {
+  month: string; // "YYYY-MM"
+  orders: number;
+  returned_orders: number;
+  return_rate_pct: number;
+  gross_revenue: Money;
+  refunded: Money;
+  net_revenue: Money;
+};
+
+export type MonthlyReturnsResponse = {
+  months_back: number;
+  rows: MonthlyReturnRow[];
+  truncated: boolean;
+};
+
 export type ResolutionBucket = "cash_refund" | "store_credit" | "exchange" | "other";
 
 export type ResolutionRow = {
@@ -555,7 +628,9 @@ export type ExportPanel =
   | "discounts"
   | "customers"
   | "payments"
-  | "returns";
+  | "returns"
+  | "orders"
+  | "refunds";
 
 // ---- F19: Cohort Retention ----
 

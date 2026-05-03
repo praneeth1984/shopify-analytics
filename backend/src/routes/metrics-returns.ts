@@ -19,13 +19,21 @@ import { getPlanCached } from "../plan/get-plan.js";
 import { computeReturnsByProduct } from "../metrics/returns-by-product.js";
 import { fetchReturnReasons } from "../metrics/returns-reasons.js";
 import { computeReturnResolution } from "../metrics/returns-resolution.js";
+import {
+  computeMonthlyReturns,
+  monthlyWindowRange,
+} from "../metrics/returns-monthly.js";
 import { BadRequest } from "../lib/errors.js";
 import type {
   DateRangePreset,
+  MonthlyReturnsResponse,
   ReturnReasonsResponse,
   ReturnResolutionResponse,
   ReturnsByProductResponse,
 } from "@fbc/shared";
+
+const FREE_MONTHS_BACK = 6;
+const PRO_MONTHS_BACK = 12;
 
 const VALID_PRESETS: DateRangePreset[] = [
   "today",
@@ -90,6 +98,23 @@ export function metricsReturnsRoutes() {
       total_returned_units: data.total_returned_units,
       truncated: data.truncated,
       history_clamped_to: historyClampedTo,
+    };
+    return c.json(body);
+  });
+
+  app.get("/monthly", async (c) => {
+    const plan = await getPlanCached(c);
+    const monthsBack = plan === "free" ? FREE_MONTHS_BACK : PRO_MONTHS_BACK;
+    const window = monthlyWindowRange(monthsBack);
+
+    const graphql = c.get("graphql");
+    const { orders, truncated } = await fetchOrdersForRange(graphql, window);
+    const rows = computeMonthlyReturns(orders, monthsBack);
+
+    const body: MonthlyReturnsResponse = {
+      months_back: monthsBack,
+      rows,
+      truncated,
     };
     return c.json(body);
   });

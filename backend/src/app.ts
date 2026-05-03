@@ -14,6 +14,8 @@ import { metricsRoutes } from "./routes/metrics.js";
 import { metricsLiveRoutes } from "./routes/metrics-live.js";
 import { metricsProfitRoutes } from "./routes/metrics-profit.js";
 import { metricsReturnsRoutes } from "./routes/metrics-returns.js";
+import { metricsOrdersRoutes } from "./routes/metrics-orders.js";
+import { metricsRefundsRoutes } from "./routes/metrics-refunds.js";
 import { metricsGeographyRoutes } from "./routes/metrics-geography.js";
 import { metricsProductsRoutes } from "./routes/metrics-products.js";
 import { metricsDiscountsRoutes } from "./routes/metrics-discounts.js";
@@ -78,6 +80,8 @@ export function createApp() {
   app.route("/api/metrics/discounts", metricsDiscountsRoutes());
   app.route("/api/metrics/customers", metricsCustomersRoutes());
   app.route("/api/metrics/payments", metricsPaymentsRoutes());
+  app.route("/api/metrics/orders", metricsOrdersRoutes());
+  app.route("/api/metrics/refunds", metricsRefundsRoutes());
   app.route("/api/metrics", metricsRoutes());
   app.route("/api/exports", exportsRoutes());
   app.route("/api/billing", billingRoutes());

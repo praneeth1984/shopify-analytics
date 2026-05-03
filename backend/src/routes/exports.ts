@@ -13,6 +13,8 @@ import { computeTopCustomers } from "../metrics/top-customers.js";
 import { computePaymentMix } from "../metrics/payment-mix.js";
 import { computeProfit } from "../metrics/profit.js";
 import { computeReturnsByProduct } from "../metrics/returns-by-product.js";
+import { fetchOrderReportPage } from "../metrics/orders-report.js";
+import { computeRefundReport } from "../metrics/refunds.js";
 import { readCogsState } from "../cogs/store.js";
 import { buildLookup } from "../cogs/lookup.js";
 import { readMetafield } from "../metafields/client.js";
@@ -22,6 +24,7 @@ import type { DateRangePreset, ExportPanel, GatewayRate } from "@fbc/shared";
 
 const VALID_PANELS: ExportPanel[] = [
   "overview", "profit", "products", "discounts", "customers", "payments", "returns",
+  "orders", "refunds",
 ];
 
 const VALID_PRESETS: DateRangePreset[] = [
@@ -230,6 +233,88 @@ export function exportsRoutes() {
           { key: "return_rate_pct", header: "Return Rate %" },
           { key: "refunded_value", header: "Refunded Value" },
           { key: "currency", header: "Currency" },
+        ],
+      );
+    } else if (panel === "orders") {
+      // F43 — paginate through the order report and stream rows to CSV.
+      const allRows = [];
+      let cursor: string | null = null;
+      let pages = 0;
+      const MAX_PAGES = 10;
+      while (pages < MAX_PAGES) {
+        const page = await fetchOrderReportPage(graphql, {
+          start: range.start,
+          end: range.end,
+          status: "all",
+          fulfillment: "all",
+          cursor,
+        });
+        allRows.push(...page.orders);
+        if (!page.cursor) break;
+        cursor = page.cursor;
+        pages += 1;
+      }
+      csv = toCsv(
+        allRows.map((r) => ({
+          order_name: r.name,
+          order_id: r.id,
+          created_at: r.created_at.slice(0, 10),
+          channel: r.channel ?? "",
+          payment_status: r.payment_status ?? "",
+          fulfillment_status: r.fulfillment_status ?? "",
+          line_item_count: r.line_item_count,
+          gross_revenue: r.gross_revenue.amount,
+          discounts: r.discounts.amount,
+          shipping: r.shipping.amount,
+          tax: r.tax.amount,
+          net_revenue: r.net_revenue.amount,
+          currency: r.gross_revenue.currency_code,
+          gateway: r.gateway ?? "",
+          tags: r.tags.join("|"),
+        })),
+        [
+          { key: "order_name", header: "Order" },
+          { key: "order_id", header: "Order ID" },
+          { key: "created_at", header: "Date" },
+          { key: "channel", header: "Channel" },
+          { key: "payment_status", header: "Payment" },
+          { key: "fulfillment_status", header: "Fulfillment" },
+          { key: "line_item_count", header: "Items" },
+          { key: "gross_revenue", header: "Gross Revenue" },
+          { key: "discounts", header: "Discounts" },
+          { key: "shipping", header: "Shipping" },
+          { key: "tax", header: "Tax" },
+          { key: "net_revenue", header: "Net Revenue" },
+          { key: "currency", header: "Currency" },
+          { key: "gateway", header: "Gateway" },
+          { key: "tags", header: "Tags" },
+        ],
+      );
+    } else if (panel === "refunds") {
+      // F45 — refund report rows
+      const result = await computeRefundReport(graphql, range);
+      csv = toCsv(
+        result.refunds.map((r) => ({
+          refunded_at: r.refunded_at.slice(0, 10),
+          order_name: r.order_name,
+          order_id: r.order_id,
+          refund_id: r.refund_id,
+          amount: r.amount.amount,
+          currency: r.amount.currency_code,
+          line_items_refunded: r.line_items_refunded,
+          restocked: r.restocked ? "yes" : "no",
+          note: r.note ?? "",
+        })),
+        [
+          { key: "refunded_at", header: "Refund Date" },
+          { key: "order_name", header: "Order" },
+          { key: "order_id", header: "Order ID" },
+          { key: "refund_id", header: "Refund ID" },
+          { key: "amount", header: "Amount" },
+          { key: "currency", header: "Currency" },
+          { key: "line_items_refunded", header: "Items Refunded" },
+          { key: "restocked", header: "Restocked" },
+          { key: "note", header: "Note" },
         ],
       );
     } else {

@@ -323,6 +323,113 @@ export type GeoOrderNode = {
 };
 
 /**
+ * F43 — Order Report query (raw order rows for the merchant-facing table).
+ *
+ * Kept separate from ORDERS_OVERVIEW_QUERY because we need order-level fields
+ * (name, displayFinancialStatus, displayFulfillmentStatus, tags, source) that
+ * the overview path does not, and we want to keep the overview cost low.
+ */
+export const ORDERS_REPORT_QUERY = /* GraphQL */ `
+  query OrdersReport($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT, reverse: true) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        name
+        processedAt
+        createdAt
+        sourceName
+        displayFinancialStatus
+        displayFulfillmentStatus
+        tags
+        paymentGatewayNames
+        currentSubtotalLineItemsQuantity
+        totalPriceSet { shopMoney { amount currencyCode } }
+        totalRefundedSet { shopMoney { amount currencyCode } }
+        totalDiscountsSet { shopMoney { amount currencyCode } }
+        totalShippingPriceSet { shopMoney { amount currencyCode } }
+        totalTaxSet { shopMoney { amount currencyCode } }
+      }
+    }
+  }
+`;
+
+export type OrderReportNode = {
+  id: string;
+  name: string;
+  processedAt: string;
+  createdAt: string;
+  sourceName: string | null;
+  displayFinancialStatus: string | null;
+  displayFulfillmentStatus: string | null;
+  tags: string[];
+  paymentGatewayNames: string[];
+  currentSubtotalLineItemsQuantity: number;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalDiscountsSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalShippingPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalTaxSet: { shopMoney: { amount: string; currencyCode: string } };
+};
+
+/**
+ * F45 — Refund Report query.
+ *
+ * Lightweight order list focused on refund details (note, refund line item
+ * counts) so the refunds page doesn't pay the full ORDERS_OVERVIEW_QUERY cost.
+ * Order-level fields are limited to what the report table needs.
+ */
+export const ORDERS_REFUNDS_QUERY = /* GraphQL */ `
+  query OrdersRefunds($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT, reverse: true) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        name
+        totalPriceSet { shopMoney { amount currencyCode } }
+        refunds {
+          id
+          createdAt
+          note
+          totalRefundedSet { shopMoney { amount currencyCode } }
+          refundLineItems(first: 50) {
+            edges {
+              node {
+                quantity
+                restockType
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export type RefundReportLineItemNode = {
+  quantity: number;
+  restockType: string | null;
+};
+
+export type RefundReportRefundNode = {
+  id: string;
+  createdAt: string;
+  note: string | null;
+  totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  refundLineItems: { edges: Array<{ node: RefundReportLineItemNode }> };
+};
+
+export type RefundReportOrderNode = {
+  id: string;
+  name: string;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  refunds: RefundReportRefundNode[];
+};
+
+/**
  * Inventory velocity query — fetches product variants with stock levels.
  * Uses productVariants connection (separate from orders), paginated.
  * Capped at 250 variants per page, max 40 pages (10,000 variants budget).
