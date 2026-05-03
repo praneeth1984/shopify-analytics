@@ -1,30 +1,18 @@
 /**
  * F47 — Order vs Return (Monthly).
- *
- * Composed chart (bars: orders / returned orders, line: return rate %) plus a
- * detail table below. Free plan returns 6 months, Pro returns 12 months —
- * controlled server-side via the plan-aware /api/metrics/returns/monthly
- * endpoint.
  */
 
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
-  Banner,
-  BlockStack,
-  Card,
-  DataTable,
-  Page,
-  SkeletonBodyText,
-  Text,
+  Banner, BlockStack, Card, DataTable, Page, SkeletonBodyText, Text,
 } from "@shopify/polaris";
 import type { MonthlyReturnsResponse } from "@fbc/shared";
 import { apiFetch, ApiError } from "../../lib/api.js";
 import { formatMoney, formatNumber } from "../../lib/format.js";
 import { ChartSkeleton } from "../../components/charts/ChartSkeleton.js";
+import { TablePagination, useClientPagination } from "../../components/TablePagination.js";
 
-const MonthlyReturnsChart = lazy(
-  () => import("../../components/charts/MonthlyReturnsChart.js"),
-);
+const MonthlyReturnsChart = lazy(() => import("../../components/charts/MonthlyReturnsChart.js"));
 
 export function MonthlyReturnsPage() {
   const [data, setData] = useState<MonthlyReturnsResponse | null>(null);
@@ -35,10 +23,7 @@ export function MonthlyReturnsPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiFetch<MonthlyReturnsResponse>(
-        "/api/metrics/returns/monthly",
-      );
-      setData(result);
+      setData(await apiFetch<MonthlyReturnsResponse>("/api/metrics/returns/monthly"));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not load monthly returns.");
     } finally {
@@ -46,19 +31,9 @@ export function MonthlyReturnsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
-  const tableRows: string[][] = (data?.rows ?? []).map((r) => [
-    r.month,
-    formatNumber(r.orders),
-    formatNumber(r.returned_orders),
-    `${r.return_rate_pct.toFixed(1)}%`,
-    formatMoney(r.gross_revenue),
-    formatMoney(r.refunded),
-    formatMoney(r.net_revenue),
-  ]);
+  const pg = useClientPagination(data?.rows ?? []);
 
   return (
     <Page
@@ -67,59 +42,39 @@ export function MonthlyReturnsPage() {
       backAction={{ content: "Reports", url: "/reports" }}
     >
       <BlockStack gap="400">
-        {error ? (
-          <Banner tone="critical" title="Could not load monthly returns">
-            <p>{error}</p>
-          </Banner>
-        ) : null}
+        {error && <Banner tone="critical" title="Could not load monthly returns"><p>{error}</p></Banner>}
+        {loading && !data && <Card><SkeletonBodyText lines={4} /></Card>}
 
-        {loading && !data ? (
-          <Card>
-            <SkeletonBodyText lines={4} />
-          </Card>
-        ) : null}
-
-        {data ? (
+        {data && (
           <>
             <Suspense fallback={<ChartSkeleton />}>
               <MonthlyReturnsChart rows={data.rows} />
             </Suspense>
 
-            <Card>
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingMd">
-                  Monthly detail
-                </Text>
-                <DataTable
-                  columnContentTypes={[
-                    "text",
-                    "numeric",
-                    "numeric",
-                    "numeric",
-                    "numeric",
-                    "numeric",
-                    "numeric",
-                  ]}
-                  headings={[
-                    "Month",
-                    "Orders",
-                    "Returned",
-                    "Return Rate",
-                    "Gross Revenue",
-                    "Refunded",
-                    "Net Revenue",
-                  ]}
-                  rows={tableRows}
-                />
-                {data.months_back === 6 ? (
-                  <Text as="p" tone="subdued" variant="bodySm">
-                    Showing the last 6 months on Free. Pro unlocks 12 months.
-                  </Text>
-                ) : null}
-              </BlockStack>
+            <Card padding="0">
+              <DataTable
+                columnContentTypes={["text","numeric","numeric","numeric","numeric","numeric","numeric"]}
+                headings={["Month","Orders","Returned","Return Rate","Gross Revenue","Refunded","Net Revenue"]}
+                rows={pg.page.map((r) => [
+                  r.month,
+                  formatNumber(r.orders),
+                  formatNumber(r.returned_orders),
+                  `${r.return_rate_pct.toFixed(1)}%`,
+                  formatMoney(r.gross_revenue),
+                  formatMoney(r.refunded),
+                  formatMoney(r.net_revenue),
+                ])}
+              />
+              <TablePagination {...pg.props} />
             </Card>
+
+            {data.months_back === 6 && (
+              <Text as="p" tone="subdued" variant="bodySm">
+                Showing the last 6 months on Free. Pro unlocks 12 months.
+              </Text>
+            )}
           </>
-        ) : null}
+        )}
       </BlockStack>
     </Page>
   );

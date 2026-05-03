@@ -40,6 +40,7 @@ import {
 import type { GraphQLClient } from "../shopify/graphql-client.js";
 import type { CogsEntry, Money } from "@fbc/shared";
 import { entriesToCsv, parseCogsCsv, type ParsedCsvRow } from "../cogs/csv.js";
+import { fetchShopifyVariantCosts } from "../cogs/sync-from-shopify.js";
 
 // ---- Helpers ----
 
@@ -534,6 +535,48 @@ export function cogsRoutes(authOverride?: ReturnType<typeof requireSessionToken>
 
     log.info("cogs.default_margin_set");
     return c.json({ meta: result.meta });
+  });
+
+  /**
+   * POST /api/cogs/sync
+   * Body: { overwrite?: boolean }
+   *
+   * Pulls inventoryItem.unitCost for all variants from Shopify and bulk-upserts
+   * them into the COGS store. `overwrite: false` (default) preserves existing
+   * manual entries; `overwrite: true` replaces them with the Shopify value.
+   *
+   * Free plan: capped at FREE_COGS_CAP entries. Returns { synced, skipped, capped }.
+   */
+  app.post("/sync", async (c) => {
+    const graphql = c.get("graphql");
+    const body = await c.req.json<{ overwrite?: boolean }>().catch(() => ({ overwrite: false }));
+    const overwrite = body.overwrite === true;
+
+    const shopCurrency = await readShopCurrency(graphql);
+    await ensureMetaInitialised(graphql, shopCurrency);
+
+    const plan = await getPlanCached(c);
+    const current = await readCogsState(graphql, shopCurrency);
+    const existingIds = new Set(current.entries.map((e) => e.variantId));
+
+    const { entries, skipped, capped } = await fetchShopifyVariantCosts(
+      graphql, plan, overwrite, existingIds,
+    );
+
+    if (entries.length === 0) {
+      log.info("cogs.sync.no_costs_found", { skipped });
+      return c.json({ synced: 0, skipped, capped });
+    }
+
+    await applyCogsWrite({
+      graphql,
+      expectedLastWriteAt: current.meta.lastWriteAt,
+      fallbackCurrency: shopCurrency,
+      op: { kind: "bulk-upsert", entries },
+    });
+
+    log.info("cogs.sync.done", { synced: entries.length, skipped, capped });
+    return c.json({ synced: entries.length, skipped, capped });
   });
 
   return app;

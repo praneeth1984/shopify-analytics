@@ -3,15 +3,14 @@ import type { Plan } from "@fbc/shared";
 
 const CUSTOMERS_QUERY = /* GraphQL */ `
   query CustomerList($first: Int!, $after: String, $query: String) {
-    customers(first: $first, after: $after, query: $query, sortKey: TOTAL_SPENT, reverse: true) {
+    customers(first: $first, after: $after, query: $query, sortKey: UPDATED_AT, reverse: true) {
       pageInfo { hasNextPage endCursor }
       nodes {
         id
         firstName
         lastName
-        email
-        ordersCount
-        totalSpentV2 { amount currencyCode }
+        numberOfOrders
+        amountSpent { amount currencyCode }
         createdAt
         updatedAt
         tags
@@ -27,7 +26,6 @@ const CUSTOMERS_QUERY = /* GraphQL */ `
 export type CustomerRow = {
   id: string;
   maskedName: string;
-  maskedEmail: string;
   city: string;
   country: string;
   totalOrders: number;
@@ -54,13 +52,6 @@ function maskName(first: string, last: string): string {
   return [initial, surname].filter(Boolean).join(" ") || "Customer";
 }
 
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!local || !domain) return "***@***.***";
-  const visible = local.slice(0, 2);
-  return `${visible}***@${domain}`;
-}
-
 function avgDaysBetween(dates: string[]): number | null {
   if (dates.length < 2) return null;
   const sorted = [...dates].sort();
@@ -73,9 +64,8 @@ type GQLCustomerNode = {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
-  ordersCount: number;
-  totalSpentV2: { amount: string; currencyCode: string };
+  numberOfOrders: number;
+  amountSpent: { amount: string; currencyCode: string };
   createdAt: string;
   updatedAt: string;
   tags: string[];
@@ -93,6 +83,7 @@ type CustomerListResp = {
 export async function computeCustomerList(
   graphql: GraphQLClient,
   plan: Plan,
+  searchQuery?: string,
 ): Promise<CustomerListResponse> {
   const freeLimit = 100;
   const pageSize = plan === "free" ? freeLimit : 250;
@@ -106,7 +97,7 @@ export async function computeCustomerList(
     const { data } = (await graphql<CustomerListResp>(CUSTOMERS_QUERY, {
       first: pageSize,
       after,
-      query: null,
+      query: searchQuery ?? null,
     })) as { data: CustomerListResp };
     customers.push(...data.customers.nodes);
     pages++;
@@ -118,16 +109,15 @@ export async function computeCustomerList(
   const rows: CustomerRow[] = customers.map((node) => {
     const addr = node.addresses[0];
     const orderDates = node.orders.nodes.map((o) => o.processedAt);
-    const totalSpent = parseFloat(node.totalSpentV2.amount);
-    const currency = node.totalSpentV2.currencyCode;
-    const aov = node.ordersCount > 0 ? totalSpent / node.ordersCount : 0;
+    const totalSpent = parseFloat(node.amountSpent.amount);
+    const currency = node.amountSpent.currencyCode;
+    const aov = node.numberOfOrders > 0 ? totalSpent / node.numberOfOrders : 0;
     return {
       id: node.id.split("/").pop() ?? node.id,
       maskedName: maskName(node.firstName ?? "", node.lastName ?? ""),
-      maskedEmail: maskEmail(node.email ?? ""),
       city: addr?.city ?? "",
       country: addr?.countryCode ?? "",
-      totalOrders: node.ordersCount,
+      totalOrders: node.numberOfOrders,
       totalSpentAmount: totalSpent.toFixed(2),
       totalSpentCurrency: currency,
       avgOrderValueAmount: aov.toFixed(2),

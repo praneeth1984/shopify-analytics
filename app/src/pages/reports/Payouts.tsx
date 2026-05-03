@@ -5,6 +5,7 @@ import {
 } from "@shopify/polaris";
 import { apiFetch, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
+import { TablePagination, useClientPagination } from "../../components/TablePagination.js";
 
 type PayoutRow = {
   id: string;
@@ -37,14 +38,15 @@ export function PayoutsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const payouts = data?.available ? data.payouts : [];
+  const pg = useClientPagination(payouts);
+
   return (
-    <Page title="Payout Report">
+    <Page title="Payout Report" backAction={{ content: "Reports", url: "/reports" }}>
       <BlockStack gap="400">
         {data?.available === false && (
           <Banner tone="info" title="Shopify Payments required">
-            <Text as="p" variant="bodySm">
-              Payout reports are only available for merchants using Shopify Payments.
-            </Text>
+            <Text as="p" variant="bodySm">Payout reports are only available for merchants using Shopify Payments.</Text>
           </Banner>
         )}
 
@@ -55,23 +57,22 @@ export function PayoutsPage() {
           <>
             {data.plan === "free" && (
               <Banner tone="info">
-                <Text as="p" variant="bodySm">Free plan: showing last 3 payouts. Upgrade to Pro for full payout history.</Text>
+                <Text as="p" variant="bodySm">Free plan: showing last 3 payouts. Upgrade to Pro for full history.</Text>
               </Banner>
             )}
-            <Card>
+            <Card padding="0">
               <DataTable
                 columnContentTypes={["text","text","text","text","text","text","numeric"]}
                 headings={["Date","Payout ID","Status","Gross","Fees","Net","Transactions"]}
-                rows={data.payouts.map((p) => [
-                  p.date,
-                  p.id,
-                  p.status,
+                rows={pg.page.map((p) => [
+                  p.date, p.id, p.status,
                   formatMoney({ amount: p.grossAmount, currency_code: p.grossCurrency }),
                   formatMoney({ amount: p.feeAmount, currency_code: p.feeCurrency }),
                   formatMoney({ amount: p.netAmount, currency_code: p.netCurrency }),
                   p.transactionCount,
                 ])}
               />
+              <TablePagination {...pg.props} />
             </Card>
             <Text as="p" variant="bodySm" tone="subdued">
               Click a payout ID to view in{" "}

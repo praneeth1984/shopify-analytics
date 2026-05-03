@@ -497,6 +497,14 @@ GDPR shop/redact semantics.
   expanding the range").
 - **Date ranges update immediately** (optimistic UI with loading indicator); never require
   a separate "Apply" button.
+- **All tables must have pagination with a configurable page size.** Use the shared
+  `<TablePagination>` component (`app/src/components/TablePagination.tsx`) for every
+  `IndexTable` or `DataTable` that fetches from the backend. Default page size is **10**;
+  options are 10 / 25 / 50 / 100. Pass `limit` as a query param to the backend so the
+  server fetches exactly the requested count. Use a cursor stack for prev/next navigation:
+  `cursorStack[pageIdx]` holds the cursor for that page; `nextCursor` from the API
+  response drives the Next button. Never render an unbounded table — even operational
+  lists (outstanding orders, customers) must paginate.
 
 ## Testing Expectations
 

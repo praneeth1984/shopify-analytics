@@ -248,6 +248,8 @@ export function exportsRoutes() {
           status: "all",
           fulfillment: "all",
           cursor,
+          search: "",
+          sort: "date_desc",
         });
         allRows.push(...page.orders);
         if (!page.cursor) break;

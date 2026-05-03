@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Page, Tabs, Card, BlockStack, Text, InlineStack, Badge, Button } from "@shopify/polaris";
+import { useEffect, useMemo, useState } from "react";
+import { Page, Tabs, Card, BlockStack, Text, InlineStack, Badge, Button, TextField } from "@shopify/polaris";
 import type { DateRangePreset } from "@fbc/shared";
 import { navigate } from "../../App.js";
 import { ComingSoon } from "../../components/ComingSoon.js";
@@ -11,6 +11,11 @@ import { MonthlyReturnsPage } from "./MonthlyReturns.js";
 import { TaxReportPage } from "./TaxReport.js";
 import { PayoutsPage } from "./Payouts.js";
 import { GiftCardsPage } from "./GiftCards.js";
+import { FulfillmentReportPage } from "./FulfillmentReport.js";
+import { TransactionReportPage } from "./TransactionReport.js";
+import { OutstandingPaymentsPage } from "./OutstandingPayments.js";
+import { TagReportPage } from "./TagReport.js";
+import { BillingLocationPage } from "./BillingLocation.js";
 
 const TABS = [
   { id: "reports", content: "Reports", panelID: "reports-panel" },
@@ -119,13 +124,65 @@ const REPORTS_INDEX = [
     description: "Outstanding gift card liability, expired/unused cards, and issuance history.",
     href: "/reports/gift-cards",
   },
+  {
+    title: "Fulfillment Report",
+    description: "Unfulfilled, stuck, and partial orders with fulfillment timing and shipping performance.",
+    href: "/reports/fulfillment",
+  },
+  {
+    title: "Transaction Report",
+    description: "Payment transactions by gateway with success rates, failure counts, and total value.",
+    href: "/reports/transactions",
+  },
+  {
+    title: "Outstanding Payments",
+    description: "Orders with pending, authorized, or partially paid status and total amount owed.",
+    href: "/reports/outstanding",
+  },
+  {
+    title: "Tag Reports",
+    description: "Revenue and order metrics grouped by order tags, product tags, or customer tags.",
+    href: "/reports/tags",
+  },
+  {
+    title: "Billing Location & Currency",
+    description: "Sales breakdown by customer billing country and checkout presentment currency.",
+    href: "/reports/billing-location",
+  },
 ];
 
 function ReportsIndexPage() {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return REPORTS_INDEX;
+    return REPORTS_INDEX.filter(
+      (r) => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q),
+    );
+  }, [query]);
+
   return (
     <Page title="Reports" subtitle="Pre-built reports for the questions merchants ask most">
       <BlockStack gap="400">
-        {REPORTS_INDEX.map((r) => (
+        <TextField
+          label="Search reports"
+          labelHidden
+          placeholder="Search reports…"
+          value={query}
+          onChange={setQuery}
+          clearButton
+          onClearButtonClick={() => setQuery("")}
+          autoComplete="off"
+        />
+
+        {filtered.length === 0 && (
+          <Card>
+            <Text as="p" tone="subdued">No reports match "{query}".</Text>
+          </Card>
+        )}
+
+        {filtered.map((r) => (
           <Card key={r.href}>
             <InlineStack align="space-between" blockAlign="center" wrap>
               <BlockStack gap="100">
@@ -175,7 +232,13 @@ function ExportInfoPage() {
 }
 
 export function ReportsSection() {
-  const path = typeof window !== "undefined" ? window.location.pathname : "";
+  const [path, setPath] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onNav = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", onNav);
+    return () => window.removeEventListener("popstate", onNav);
+  }, []);
 
   // Sub-routes for individual report pages bypass the tab UI.
   if (path.startsWith("/reports/orders")) return <OrderReportPage />;
@@ -184,6 +247,11 @@ export function ReportsSection() {
   if (path.startsWith("/reports/tax")) return <TaxReportPage />;
   if (path.startsWith("/reports/payouts")) return <PayoutsPage />;
   if (path.startsWith("/reports/gift-cards")) return <GiftCardsPage />;
+  if (path.startsWith("/reports/fulfillment")) return <FulfillmentReportPage />;
+  if (path.startsWith("/reports/transactions")) return <TransactionReportPage />;
+  if (path.startsWith("/reports/outstanding")) return <OutstandingPaymentsPage />;
+  if (path.startsWith("/reports/tags")) return <TagReportPage />;
+  if (path.startsWith("/reports/billing-location")) return <BillingLocationPage />;
 
   return <ReportsTabsPage />;
 }

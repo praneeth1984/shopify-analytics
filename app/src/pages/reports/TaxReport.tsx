@@ -7,6 +7,7 @@ import type { DateRangePreset } from "@fbc/shared";
 import { apiFetch, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
 import { RangePicker } from "../../components/RangePicker.js";
+import { TablePagination, useClientPagination } from "../../components/TablePagination.js";
 
 const TAX_DISCLAIMER = "Tax collected as recorded by Shopify. Consult your accountant for official filing.";
 
@@ -37,8 +38,11 @@ export function TaxReportPage() {
       .finally(() => setLoading(false));
   }, [preset, tabKey]);
 
+  const pgMonthly = useClientPagination(data?.monthly ?? []);
+  const pgGeo = useClientPagination(data?.geo ?? []);
+
   return (
-    <Page title="Tax Reports">
+    <Page title="Tax Reports" backAction={{ content: "Reports", url: "/reports" }}>
       <BlockStack gap="400">
         <Banner tone="info"><Text as="p" variant="bodySm">{TAX_DISCLAIMER}</Text></Banner>
 
@@ -49,7 +53,6 @@ export function TaxReportPage() {
         )}
 
         <RangePicker value={preset} onChange={setPreset} />
-
         {error && <Banner tone="critical"><Text as="p">{error}</Text></Banner>}
 
         <Tabs tabs={TABS} selected={tab} onSelect={setTab}>
@@ -57,37 +60,39 @@ export function TaxReportPage() {
 
           {!loading && data && !data.hasData && (
             <Card>
-              <Text as="p" tone="subdued">No tax data in this period. Tax data is built from order webhooks — it will populate as new orders arrive.</Text>
+              <Text as="p" tone="subdued">No tax data in this period. Tax data populates as new orders arrive via webhooks.</Text>
             </Card>
           )}
 
           {!loading && data?.hasData && data.tab === "monthly" && data.monthly && (
-            <Card>
+            <Card padding="0">
               <DataTable
                 columnContentTypes={["text","text","numeric","numeric"]}
                 headings={["Month","Tax collected","Orders","Jurisdictions"]}
-                rows={data.monthly.map((r) => [
+                rows={pgMonthly.page.map((r) => [
                   r.month,
                   formatMoney({ amount: (r.totalTaxMinor / 100).toFixed(2), currency_code: r.currency }),
                   r.orderCount,
                   r.jurisdictions,
                 ])}
               />
+              <TablePagination {...pgMonthly.props} />
             </Card>
           )}
 
           {!loading && data?.hasData && data.tab === "geo" && data.geo && (
-            <Card>
+            <Card padding="0">
               <DataTable
                 columnContentTypes={["text","text","text","numeric"]}
                 headings={["Country","Province","Tax collected","Orders"]}
-                rows={data.geo.map((r) => [
+                rows={pgGeo.page.map((r) => [
                   r.countryCode,
                   r.provinceCode ?? "—",
                   formatMoney({ amount: (r.totalTaxMinor / 100).toFixed(2), currency_code: r.currency }),
                   r.orderCount,
                 ])}
               />
+              <TablePagination {...pgGeo.props} />
             </Card>
           )}
         </Tabs>

@@ -19,7 +19,7 @@ import { requireSessionToken } from "../middleware/auth.js";
 import { resolveRange } from "../metrics/date-range.js";
 import { clampRangeForPlan } from "../metrics/history-clamp.js";
 import { getPlanCached } from "../plan/get-plan.js";
-import { fetchOrderReportPage } from "../metrics/orders-report.js";
+import { fetchOrderReportPage, VALID_ORDER_SORTS, VALID_PAGE_SIZES } from "../metrics/orders-report.js";
 import { computeOutstandingPayments } from "../metrics/outstanding.js";
 import { BadRequest } from "../lib/errors.js";
 import type {
@@ -67,6 +67,13 @@ export function metricsOrdersRoutes() {
     if (!VALID_FULFILLMENT.includes(fulfillment)) throw BadRequest("invalid fulfillment");
 
     const cursor = c.req.query("cursor") ?? null;
+    const search = c.req.query("search") ?? "";
+    const sort = c.req.query("sort") ?? "date_desc";
+    if (!VALID_ORDER_SORTS.includes(sort as typeof VALID_ORDER_SORTS[number])) {
+      throw BadRequest("invalid sort");
+    }
+    const limitRaw = Number(c.req.query("limit") ?? 10);
+    const limit = (VALID_PAGE_SIZES as readonly number[]).includes(limitRaw) ? limitRaw : 10;
     const fromQ = c.req.query("from");
     const toQ = c.req.query("to");
 
@@ -85,6 +92,9 @@ export function metricsOrdersRoutes() {
       status,
       fulfillment,
       cursor,
+      search,
+      sort,
+      limit,
     });
     return c.json(result);
   });

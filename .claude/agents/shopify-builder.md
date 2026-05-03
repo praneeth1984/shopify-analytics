@@ -32,6 +32,12 @@ your defaults.
 - **Metafield writes are idempotent** — always set, never insert-then-update.
 - **No new dependencies without a one-line justification** in the commit message.
 - Prefer editing existing files over creating new ones (per CLAUDE.md).
+- **All tables must use `<TablePagination>`.** The shared component lives at
+  `app/src/components/TablePagination.tsx`. Default page size is 10; options are
+  10/25/50/100. Pass `limit` to the backend so it fetches only that many rows.
+  Use a cursor stack for prev/next: `cursorStack[pageIdx]` is the cursor for that
+  page; `nextCursor` from the API drives the Next button. Never render an unbounded
+  table — every `IndexTable` and `DataTable` must paginate.
 
 ## When something is ambiguous
 

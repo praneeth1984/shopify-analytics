@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Card, BlockStack, Text, TextField, Button, InlineStack, Box, Banner,
-  Divider, EmptyState,
+  Divider, EmptyState, Badge,
 } from "@shopify/polaris";
 import { useCogs } from "../../hooks/useCogs.js";
 import type { CogsSearchVariant } from "../../hooks/useCogs.js";
@@ -86,6 +86,24 @@ export function CogsSettingsTab() {
     return result;
   };
 
+  const [syncBanner, setSyncBanner] = useState<{ synced: number; capped: boolean } | null>(null);
+
+  const handleSync = async (overwrite = false) => {
+    setSyncBanner(null);
+    const result = await cogs.syncFromShopify(overwrite);
+    if (!result.ok) {
+      showToast(result.message, { isError: true });
+      return;
+    }
+    const { synced, capped } = result.result;
+    if (synced === 0) {
+      showToast("No new costs found in Shopify.");
+    } else {
+      showToast(`Synced ${synced} cost${synced !== 1 ? "s" : ""} from Shopify.`);
+    }
+    if (capped) setSyncBanner({ synced, capped: true });
+  };
+
   return (
     <BlockStack gap="400">
       {cogs.error && (
@@ -121,6 +139,49 @@ export function CogsSettingsTab() {
             }}
             disabled={!cogs.meta || cogs.loading}
           />
+        </BlockStack>
+      </Card>
+
+      {syncBanner && (
+        <Banner
+          tone="warning"
+          title={`Free plan: only ${syncBanner.synced} costs synced`}
+          onDismiss={() => setSyncBanner(null)}
+        >
+          <p>Upgrade to Pro to sync all your product costs without limits.</p>
+        </Banner>
+      )}
+
+      <Card>
+        <BlockStack gap="300">
+          <InlineStack align="space-between" blockAlign="center">
+            <Text as="h3" variant="headingMd">Sync from Shopify</Text>
+            <Badge tone="info">Recommended</Badge>
+          </InlineStack>
+          <Text as="p" tone="subdued">
+            Import costs directly from Shopify's "Cost per item" field (Products → variant → Inventory).
+            Existing manual overrides are preserved — only variants without a saved cost are filled in.
+          </Text>
+          <InlineStack gap="200">
+            <Button
+              variant="primary"
+              onClick={() => void handleSync(false)}
+              loading={cogs.syncing}
+              disabled={cogs.loading}
+            >
+              Sync from Shopify
+            </Button>
+            {cogs.entries.length > 0 && (
+              <Button
+                onClick={() => void handleSync(true)}
+                loading={cogs.syncing}
+                disabled={cogs.loading}
+                tone="critical"
+              >
+                Overwrite all with Shopify costs
+              </Button>
+            )}
+          </InlineStack>
         </BlockStack>
       </Card>
 
@@ -180,7 +241,17 @@ export function CogsSettingsTab() {
         {cogs.entries.length === 0 ? (
           <Card>
             <EmptyState heading="No saved costs yet" image="">
-              <p>Use the search above to add your first product cost.</p>
+              <p>
+                Sync costs from Shopify's "Cost per item" field, or add them manually using the search above.
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => void handleSync(false)}
+                loading={cogs.syncing}
+                disabled={cogs.loading}
+              >
+                Sync from Shopify
+              </Button>
             </EmptyState>
           </Card>
         ) : (

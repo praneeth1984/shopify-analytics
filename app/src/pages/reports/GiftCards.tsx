@@ -5,6 +5,7 @@ import {
 } from "@shopify/polaris";
 import { apiFetch, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
+import { TablePagination, useClientPagination } from "../../components/TablePagination.js";
 
 type GiftCardOverview = {
   totalIssued: number;
@@ -40,6 +41,37 @@ const TABS = [
   { id: "issuance", content: "Issuance", panelID: "issuance-panel" },
 ];
 
+function KpiRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Box>
+      <Text as="p" variant="bodySm" tone="subdued">{label}</Text>
+      <Text as="p" variant="bodyMd" fontWeight="semibold">{value}</Text>
+    </Box>
+  );
+}
+
+function GiftCardTable({ rows }: { rows: GiftCardRow[] }) {
+  const pg = useClientPagination(rows);
+  if (rows.length === 0) return <Text as="p" tone="subdued">No gift cards to display.</Text>;
+  return (
+    <>
+      <DataTable
+        columnContentTypes={["text","text","text","text","numeric","text"]}
+        headings={["Last 4","Initial value","Balance","Expires","Uses","Created"]}
+        rows={pg.page.map((r) => [
+          `****${r.lastCharacters}`,
+          formatMoney({ amount: r.initialValueAmount, currency_code: r.initialValueCurrency }),
+          formatMoney({ amount: r.balanceAmount, currency_code: r.balanceCurrency }),
+          r.expiresOn ?? "No expiry",
+          r.usageCount,
+          r.createdAt.slice(0, 10),
+        ])}
+      />
+      <TablePagination {...pg.props} />
+    </>
+  );
+}
+
 export function GiftCardsPage() {
   const [data, setData] = useState<GiftCardsResponse | null>(null);
   const [tab, setTab] = useState(0);
@@ -56,14 +88,13 @@ export function GiftCardsPage() {
   }, []);
 
   return (
-    <Page title="Gift Cards">
+    <Page title="Gift Cards" backAction={{ content: "Reports", url: "/reports" }}>
       <BlockStack gap="400">
         {data?.scope_missing && (
           <Banner tone="warning" title="Gift card permission not enabled">
             <Text as="p" variant="bodySm">Gift card reports require the <strong>read_gift_cards</strong> scope. Reinstall the app to enable.</Text>
           </Banner>
         )}
-
         {error && <Banner tone="critical"><Text as="p">{error}</Text></Banner>}
         {loading && <Card><SkeletonBodyText lines={5} /></Card>}
 
@@ -81,45 +112,18 @@ export function GiftCardsPage() {
               </Card>
             )}
             {tab === 1 && (
-              <Card>
+              <Card padding="0">
                 <GiftCardTable rows={data.expiredOrUnused} />
               </Card>
             )}
             {tab === 2 && (
               data.plan === "free"
                 ? <Banner tone="info"><Text as="p" variant="bodySm">Issuance details available on Pro plan.</Text></Banner>
-                : <Card><GiftCardTable rows={data.issuance} /></Card>
+                : <Card padding="0"><GiftCardTable rows={data.issuance} /></Card>
             )}
           </Tabs>
         )}
       </BlockStack>
     </Page>
-  );
-}
-
-function KpiRow({ label, value }: { label: string; value: string }) {
-  return (
-    <Box>
-      <Text as="p" variant="bodySm" tone="subdued">{label}</Text>
-      <Text as="p" variant="bodyMd" fontWeight="semibold">{value}</Text>
-    </Box>
-  );
-}
-
-function GiftCardTable({ rows }: { rows: GiftCardRow[] }) {
-  if (rows.length === 0) return <Text as="p" tone="subdued">No gift cards to display.</Text>;
-  return (
-    <DataTable
-      columnContentTypes={["text","text","text","text","numeric","text"]}
-      headings={["Last 4","Initial value","Balance","Expires","Uses","Created"]}
-      rows={rows.map((r) => [
-        `****${r.lastCharacters}`,
-        formatMoney({ amount: r.initialValueAmount, currency_code: r.initialValueCurrency }),
-        formatMoney({ amount: r.balanceAmount, currency_code: r.balanceCurrency }),
-        r.expiresOn ?? "No expiry",
-        r.usageCount,
-        r.createdAt.slice(0, 10),
-      ])}
-    />
   );
 }

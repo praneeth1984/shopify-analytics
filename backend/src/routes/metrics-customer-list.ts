@@ -11,7 +11,8 @@ export function metricsCustomerListRoutes() {
   app.get("/", async (c) => {
     const plan = await getPlanCached(c);
     const graphql = c.get("graphql");
-    const result = await computeCustomerList(graphql, plan);
+    const q = c.req.query("q")?.trim() || undefined;
+    const result = await computeCustomerList(graphql, plan, q);
     return c.json(result);
   });
 

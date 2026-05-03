@@ -28,6 +28,7 @@ import type {
 import { apiFetch, ApiError } from "../../lib/api.js";
 import { formatMoney, formatNumber } from "../../lib/format.js";
 import { RangePicker } from "../../components/RangePicker.js";
+import { TablePagination, useClientPagination } from "../../components/TablePagination.js";
 
 const TABS: { id: FulfillmentView; content: string; panelID: string }[] = [
   { id: "unfulfilled", content: "Unfulfilled", panelID: "unfulfilled-panel" },
@@ -84,6 +85,12 @@ export function FulfillmentReportPage() {
   }, [data]);
 
   const hasOldStuck = operationalRows.some((r) => r.days_waiting > STUCK_DAYS_ALERT);
+  const pgOp = useClientPagination(operationalRows);
+  const shippingRows = useMemo(() => {
+    if (!data || data.view !== "shipping") return [];
+    return data.rows;
+  }, [data]);
+  const pgShipping = useClientPagination(shippingRows);
 
   return (
     <Page
@@ -133,35 +140,27 @@ export function FulfillmentReportPage() {
           <Card padding="0">
             <IndexTable
               resourceName={{ singular: "order", plural: "orders" }}
-              itemCount={data.rows.length}
+              itemCount={pgOp.page.length}
               selectable={false}
               loading={loading}
               headings={[
-                { title: "Order" },
-                { title: "Created" },
-                { title: "Days waiting" },
-                { title: "Items" },
-                { title: "Total" },
-                { title: "Payment" },
+                { title: "Order" }, { title: "Created" }, { title: "Days waiting" },
+                { title: "Items" }, { title: "Total" }, { title: "Payment" },
               ]}
               emptyState={
                 <Box padding="400">
-                  <Text as="p" tone="subdued">
-                    No orders match this view. That's a good thing — nothing's stuck.
-                  </Text>
+                  <Text as="p" tone="subdued">No orders match this view. Nothing's stuck.</Text>
                 </Box>
               }
             >
-              {data.rows.map((r, idx) => (
+              {pgOp.page.map((r, idx) => (
                 <IndexTable.Row id={r.order_id} key={r.order_id} position={idx}>
                   <IndexTable.Cell>{r.name}</IndexTable.Cell>
                   <IndexTable.Cell>{formatDate(r.created_at)}</IndexTable.Cell>
                   <IndexTable.Cell>
-                    {r.days_waiting > STUCK_DAYS_ALERT ? (
-                      <Badge tone="warning">{`${r.days_waiting} days`}</Badge>
-                    ) : (
-                      `${r.days_waiting} days`
-                    )}
+                    {r.days_waiting > STUCK_DAYS_ALERT
+                      ? <Badge tone="warning">{`${r.days_waiting} days`}</Badge>
+                      : `${r.days_waiting} days`}
                   </IndexTable.Cell>
                   <IndexTable.Cell>{formatNumber(r.item_count)}</IndexTable.Cell>
                   <IndexTable.Cell>{formatMoney(r.total_price)}</IndexTable.Cell>
@@ -169,6 +168,7 @@ export function FulfillmentReportPage() {
                 </IndexTable.Row>
               ))}
             </IndexTable>
+            <TablePagination {...pgOp.props} />
           </Card>
         )}
 
@@ -228,40 +228,31 @@ export function FulfillmentReportPage() {
             </Box>
             <IndexTable
               resourceName={{ singular: "order", plural: "orders" }}
-              itemCount={data.rows.length}
+              itemCount={pgShipping.page.length}
               selectable={false}
               loading={loading}
               headings={[
-                { title: "Order" },
-                { title: "Carrier" },
-                { title: "Service" },
-                { title: "Charged" },
-                { title: "Carrier Cost" },
-                { title: "P&L" },
+                { title: "Order" }, { title: "Carrier" }, { title: "Service" },
+                { title: "Charged" }, { title: "Carrier Cost" }, { title: "P&L" },
               ]}
               emptyState={
                 <Box padding="400">
-                  <Text as="p" tone="subdued">
-                    No orders with shipping in this period.
-                  </Text>
+                  <Text as="p" tone="subdued">No orders with shipping in this period.</Text>
                 </Box>
               }
             >
-              {data.rows.map((r, idx) => (
+              {pgShipping.page.map((r, idx) => (
                 <IndexTable.Row id={r.order_id} key={r.order_id} position={idx}>
                   <IndexTable.Cell>{r.name}</IndexTable.Cell>
                   <IndexTable.Cell>{r.carrier ?? "—"}</IndexTable.Cell>
                   <IndexTable.Cell>{r.service ?? "—"}</IndexTable.Cell>
                   <IndexTable.Cell>{formatMoney(r.shipping_charged)}</IndexTable.Cell>
-                  <IndexTable.Cell>
-                    {r.carrier_cost ? formatMoney(r.carrier_cost) : "—"}
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    {r.shipping_pnl ? formatMoney(r.shipping_pnl) : "—"}
-                  </IndexTable.Cell>
+                  <IndexTable.Cell>{r.carrier_cost ? formatMoney(r.carrier_cost) : "—"}</IndexTable.Cell>
+                  <IndexTable.Cell>{r.shipping_pnl ? formatMoney(r.shipping_pnl) : "—"}</IndexTable.Cell>
                 </IndexTable.Row>
               ))}
             </IndexTable>
+            <TablePagination {...pgShipping.props} />
           </Card>
         )}
       </BlockStack>

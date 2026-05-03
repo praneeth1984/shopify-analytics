@@ -40,8 +40,15 @@ export type CogsSearchResponse = {
   meta: CogsMeta;
 };
 
+export type SyncResult = {
+  synced: number;
+  skipped: number;
+  capped: boolean;
+};
+
 export type UseCogsState = {
   loading: boolean;
+  syncing: boolean;
   error: string | null;
   entries: CogsEntry[];
   meta: CogsMeta | null;
@@ -60,6 +67,7 @@ export type UseCogsState = {
     pct: number,
   ) => Promise<{ ok: true } | { ok: false; code: string; message: string }>;
   search: (query: string, cursor?: string | null) => Promise<CogsSearchResponse>;
+  syncFromShopify: (overwrite?: boolean) => Promise<{ ok: true; result: SyncResult } | { ok: false; code: string; message: string }>;
 };
 
 export function useCogs(): UseCogsState {
@@ -68,6 +76,7 @@ export function useCogs(): UseCogsState {
   const [plan, setPlan] = useState<Plan>("free");
   const [cap, setCap] = useState<number>(20);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
@@ -205,8 +214,31 @@ export function useCogs(): UseCogsState {
     return apiFetch<CogsSearchResponse>(`/api/cogs?${params.toString()}`);
   }, []);
 
+  const syncFromShopify = useCallback<UseCogsState["syncFromShopify"]>(
+    async (overwrite = false) => {
+      setSyncing(true);
+      try {
+        const result = await apiFetch<{ synced: number; skipped: number; capped: boolean }>(
+          "/api/cogs/sync",
+          { method: "POST", body: JSON.stringify({ overwrite }) },
+        );
+        await reload();
+        return { ok: true, result };
+      } catch (e) {
+        if (e instanceof ApiError) {
+          return { ok: false, code: e.code, message: e.message };
+        }
+        return { ok: false, code: "request_failed", message: "Sync failed." };
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [reload],
+  );
+
   return {
     loading,
+    syncing,
     error,
     entries,
     meta,
@@ -217,5 +249,6 @@ export function useCogs(): UseCogsState {
     remove,
     setDefaultMargin,
     search,
+    syncFromShopify,
   };
 }

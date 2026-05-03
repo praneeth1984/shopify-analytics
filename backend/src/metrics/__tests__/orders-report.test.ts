@@ -56,6 +56,7 @@ describe("orders-report buildSearchQuery", () => {
       end: "2026-05-01T00:00:00Z",
       status: "all",
       fulfillment: "all",
+      search: "",
     });
     expect(q).toContain("processed_at:>='2026-04-01T00:00:00Z'");
     expect(q).toContain("processed_at:<'2026-05-01T00:00:00Z'");
@@ -67,6 +68,7 @@ describe("orders-report buildSearchQuery", () => {
       end: "2026-05-01",
       status: "paid",
       fulfillment: "all",
+      search: "",
     });
     expect(q).toContain("financial_status:paid");
   });
@@ -77,6 +79,7 @@ describe("orders-report buildSearchQuery", () => {
       end: "2026-05-01",
       status: "all",
       fulfillment: "unfulfilled",
+      search: "",
     });
     expect(q).toContain("fulfillment_status:unfulfilled");
   });
@@ -87,6 +90,7 @@ describe("orders-report buildSearchQuery", () => {
       end: "2026-05-01",
       status: "cancelled",
       fulfillment: "all",
+      search: "",
     });
     expect(q).toContain("status:cancelled");
   });

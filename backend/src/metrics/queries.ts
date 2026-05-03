@@ -330,8 +330,8 @@ export type GeoOrderNode = {
  * the overview path does not, and we want to keep the overview cost low.
  */
 export const ORDERS_REPORT_QUERY = /* GraphQL */ `
-  query OrdersReport($query: String!, $first: Int!, $after: String) {
-    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT, reverse: true) {
+  query OrdersReport($query: String!, $first: Int!, $after: String, $sortKey: OrderSortKeys, $reverse: Boolean) {
+    orders(first: $first, after: $after, query: $query, sortKey: $sortKey, reverse: $reverse) {
       pageInfo {
         hasNextPage
         endCursor
