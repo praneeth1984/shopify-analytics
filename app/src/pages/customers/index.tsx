@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Page, Tabs } from "@shopify/polaris";
 import { navigate } from "../../App.js";
 import { CustomersOverviewPage } from "./Overview.js";
+import { AllCustomersPage } from "./AllCustomers.js";
 import { RetentionPage } from "./Retention.js";
 import { LtvPage } from "./Ltv.js";
 import { RfmPage } from "./Rfm.js";
@@ -9,6 +10,7 @@ import { Geography } from "../Geography.js";
 
 const TABS = [
   { id: "overview", content: "Overview", panelID: "overview-panel" },
+  { id: "all", content: "All Customers", panelID: "all-panel" },
   { id: "retention", content: "Cohort Retention", panelID: "retention-panel" },
   { id: "ltv", content: "LTV", panelID: "ltv-panel" },
   { id: "rfm", content: "RFM Segments", panelID: "rfm-panel" },
@@ -17,6 +19,7 @@ const TABS = [
 
 const ROUTES = [
   "/customers/overview",
+  "/customers/all",
   "/customers/retention",
   "/customers/ltv",
   "/customers/rfm",
@@ -25,7 +28,7 @@ const ROUTES = [
 
 function getInitialTab(): number {
   const path = window.location.pathname;
-  if (path.startsWith("/geography")) return 4; // legacy redirect
+  if (path.startsWith("/geography")) return 5; // legacy redirect
   const idx = ROUTES.findIndex((r) => path.startsWith(r));
   return idx >= 0 ? idx : 0;
 }
@@ -42,10 +45,11 @@ export function CustomersSection() {
     <Page title="Customers" fullWidth>
       <Tabs tabs={TABS} selected={selected} onSelect={handleTabChange}>
         {selected === 0 && <CustomersOverviewPage />}
-        {selected === 1 && <RetentionPage />}
-        {selected === 2 && <LtvPage />}
-        {selected === 3 && <RfmPage />}
-        {selected === 4 && <Geography />}
+        {selected === 1 && <AllCustomersPage />}
+        {selected === 2 && <RetentionPage />}
+        {selected === 3 && <LtvPage />}
+        {selected === 4 && <RfmPage />}
+        {selected === 5 && <Geography />}
       </Tabs>
     </Page>
   );

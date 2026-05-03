@@ -8,6 +8,9 @@ import { ExportButton } from "../../components/ExportButton.js";
 import { OrderReportPage } from "./OrderReport.js";
 import { RefundReportPage } from "./RefundReport.js";
 import { MonthlyReturnsPage } from "./MonthlyReturns.js";
+import { TaxReportPage } from "./TaxReport.js";
+import { PayoutsPage } from "./Payouts.js";
+import { GiftCardsPage } from "./GiftCards.js";
 
 const TABS = [
   { id: "reports", content: "Reports", panelID: "reports-panel" },
@@ -101,6 +104,21 @@ const REPORTS_INDEX = [
     description: "Monthly orders and returned orders with return-rate trend over time.",
     href: "/reports/returns-monthly",
   },
+  {
+    title: "Tax Report",
+    description: "Monthly tax summary and breakdown by country/state for filing reference.",
+    href: "/reports/tax",
+  },
+  {
+    title: "Payout Report",
+    description: "Shopify Payments payout history with gross, fees, and net per payout.",
+    href: "/reports/payouts",
+  },
+  {
+    title: "Gift Cards",
+    description: "Outstanding gift card liability, expired/unused cards, and issuance history.",
+    href: "/reports/gift-cards",
+  },
 ];
 
 function ReportsIndexPage() {
@@ -163,6 +181,9 @@ export function ReportsSection() {
   if (path.startsWith("/reports/orders")) return <OrderReportPage />;
   if (path.startsWith("/reports/refunds")) return <RefundReportPage />;
   if (path.startsWith("/reports/returns-monthly")) return <MonthlyReturnsPage />;
+  if (path.startsWith("/reports/tax")) return <TaxReportPage />;
+  if (path.startsWith("/reports/payouts")) return <PayoutsPage />;
+  if (path.startsWith("/reports/gift-cards")) return <GiftCardsPage />;
 
   return <ReportsTabsPage />;
 }

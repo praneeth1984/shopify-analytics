@@ -32,6 +32,14 @@ import { billingRoutes } from "./routes/billing.js";
 import { expensesRoutes } from "./routes/expenses.js";
 import { feedbackRoutes } from "./routes/feedback.js";
 import { devSeedRoutes } from "./routes/dev-seed.js";
+import { webhooksD1Routes } from "./routes/webhooks-d1.js";
+import { metricsTaxRoutes } from "./routes/metrics-tax.js";
+import { metricsUTMRoutes } from "./routes/metrics-utm.js";
+import { metricsCollectionsRoutes } from "./routes/metrics-collections.js";
+import { metricsCustomerListRoutes } from "./routes/metrics-customer-list.js";
+import { metricsPayoutsRoutes } from "./routes/metrics-payouts.js";
+import { metricsAbandonedCartRoutes } from "./routes/metrics-abandoned-cart.js";
+import { metricsGiftCardsRoutes } from "./routes/metrics-gift-cards.js";
 import { HttpError } from "./lib/errors.js";
 import { log } from "./lib/logger.js";
 
@@ -75,6 +83,7 @@ export function createApp() {
 
   app.route("/auth", authRoutes());
   app.route("/webhooks", webhookRoutes());
+  app.route("/webhooks", webhooksD1Routes());
   // More specific routes first so they take precedence in Hono's matcher.
   app.route("/api/metrics/live", metricsLiveRoutes());
   app.route("/api/metrics/profit", metricsProfitRoutes());
@@ -90,6 +99,13 @@ export function createApp() {
   app.route("/api/metrics/sales/attribution", metricsSalesAttributionRoutes());
   app.route("/api/metrics/tags", metricsTagsRoutes());
   app.route("/api/metrics/transactions", metricsTransactionsRoutes());
+  app.route("/api/metrics/tax", metricsTaxRoutes());
+  app.route("/api/metrics/utm", metricsUTMRoutes());
+  app.route("/api/metrics/collections", metricsCollectionsRoutes());
+  app.route("/api/metrics/customers/list", metricsCustomerListRoutes());
+  app.route("/api/metrics/payouts", metricsPayoutsRoutes());
+  app.route("/api/metrics/abandoned-cart", metricsAbandonedCartRoutes());
+  app.route("/api/metrics/gift-cards", metricsGiftCardsRoutes());
   app.route("/api/metrics", metricsRoutes());
   app.route("/api/exports", exportsRoutes());
   app.route("/api/billing", billingRoutes());

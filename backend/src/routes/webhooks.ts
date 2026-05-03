@@ -18,6 +18,7 @@
 import { Hono } from "hono";
 import type { Env } from "../env.js";
 import { verifyWebhook } from "../shopify/webhook-verify.js";
+import { deleteAllForShop } from "../sync/order-to-d1.js";
 import { log } from "../lib/logger.js";
 import {
   PLAN_CACHE_TTL_SECONDS,
@@ -93,6 +94,12 @@ export function webhookRoutes() {
 
     if (shop && env.BULK_OPS_KV) {
       await clearShopScopedKv(env.BULK_OPS_KV, shop);
+    }
+    // Also purge all D1 analytics rows for this shop (GDPR: shop/redact equivalent).
+    if (shop && env.FEEDBACK_DB) {
+      try { await deleteAllForShop(env.FEEDBACK_DB, shop); } catch (err) {
+        log.warn("webhook.d1_purge_failed", { shop, message: err instanceof Error ? err.message : "unknown" });
+      }
     }
     log.info("webhook.app_uninstalled", { shop });
     return c.body(null, 200);

@@ -27,6 +27,7 @@ export type Env = {
   //   - bulk:{shop_domain}:{...}  bulk-operation polling cursors (Phase 1.5)
   BULK_OPS_KV: KVNamespace;
 
-  // D1 — cross-shop feedback storage
+  // D1 — cross-shop database (firstbridge-db).
+  // Tables: feedback, upvotes, order_tax, order_utm, order_product, product_collection, backfill_state.
   FEEDBACK_DB: D1Database;
 };

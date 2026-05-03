@@ -13,7 +13,7 @@ automatically_update_urls_on_dev = true
 [access_scopes]
 # read_orders requires Protected Customer Data approval in the Partner dashboard.
 # For dev stores, request access under Apps → Configuration → Protected customer data.
-scopes = "read_products,read_orders,read_all_orders,read_customers,read_inventory,read_reports,read_returns"
+scopes = "read_products,read_orders,read_all_orders,read_customers,read_inventory,read_reports,read_returns,read_shopify_payments_payouts,read_checkouts,read_gift_cards"
 
 [auth]
 redirect_urls = [
@@ -36,6 +36,23 @@ uri = "https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev/webho
 [[webhooks.subscriptions]]
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
 uri = "https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev/webhooks/compliance"
+
+# Order sync → D1 analytics tables (order_tax, order_utm, order_product)
+[[webhooks.subscriptions]]
+topics = ["orders/create"]
+uri = "https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev/webhooks/orders/create"
+
+[[webhooks.subscriptions]]
+topics = ["orders/updated"]
+uri = "https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev/webhooks/orders/updated"
+
+[[webhooks.subscriptions]]
+topics = ["orders/cancelled"]
+uri = "https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev/webhooks/orders/cancelled"
+
+[[webhooks.subscriptions]]
+topics = ["orders/delete"]
+uri = "https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev/webhooks/orders/delete"
 
 [pos]
 embedded = false
