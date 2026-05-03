@@ -19,6 +19,7 @@ import { ProductsSection } from "./pages/products/index.js";
 import { CustomersSection } from "./pages/customers/index.js";
 import { MarketingSection } from "./pages/marketing/index.js";
 import { ReportsSection } from "./pages/reports/index.js";
+import { Feedback } from "./pages/Feedback.js";
 
 type Route =
   | "dashboard"
@@ -28,11 +29,13 @@ type Route =
   | "products"
   | "customers"
   | "marketing"
-  | "reports";
+  | "reports"
+  | "feedback";
 
 function readRoute(): Route {
   if (typeof window === "undefined") return "dashboard";
   const path = window.location.pathname.replace(/\/+$/, "");
+  if (path === "" || path.startsWith("/overview")) return "dashboard";
   if (path.startsWith("/settings")) return "settings";
   if (path.startsWith("/billing")) return "billing";
   if (path.startsWith("/profit")) return "profit";
@@ -41,6 +44,7 @@ function readRoute(): Route {
   if (path.startsWith("/customers") || path.startsWith("/geography")) return "customers";
   if (path.startsWith("/marketing")) return "marketing";
   if (path.startsWith("/reports")) return "reports";
+  if (path.startsWith("/feedback")) return "feedback";
   return "dashboard";
 }
 
@@ -55,6 +59,13 @@ export function App() {
   const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    // Canonicalise root "/" → "/overview" so the ui-nav-menu highlights Overview
+    // correctly. replaceState doesn't fire popstate, so no re-render needed.
+    const p = window.location.pathname;
+    if (p === "/" || p === "") {
+      window.history.replaceState({}, "", "/overview");
+    }
+
     const onNav = () => setRoute(readRoute());
     window.addEventListener("popstate", onNav);
     return () => window.removeEventListener("popstate", onNav);
@@ -84,6 +95,7 @@ export function App() {
   if (route === "customers") return <CustomersSection />;
   if (route === "marketing") return <MarketingSection />;
   if (route === "reports") return <ReportsSection />;
+  if (route === "feedback") return <Feedback />;
 
   return (
     <Frame>

@@ -23,6 +23,7 @@ import { cogsRoutes } from "./routes/cogs.js";
 import { preferencesRoutes } from "./routes/preferences.js";
 import { billingRoutes } from "./routes/billing.js";
 import { expensesRoutes } from "./routes/expenses.js";
+import { feedbackRoutes } from "./routes/feedback.js";
 import { devSeedRoutes } from "./routes/dev-seed.js";
 import { HttpError } from "./lib/errors.js";
 import { log } from "./lib/logger.js";
@@ -81,6 +82,7 @@ export function createApp() {
   app.route("/api/cogs", cogsRoutes());
   app.route("/api/preferences", preferencesRoutes());
   app.route("/api/expenses", expensesRoutes());
+  app.route("/api/feedback", feedbackRoutes());
 
   // Dev-only seeding endpoint — guarded inside the route by ENVIRONMENT check
   app.route("/api/dev", devSeedRoutes());

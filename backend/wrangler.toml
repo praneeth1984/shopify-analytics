@@ -25,6 +25,15 @@ binding = "BULK_OPS_KV"
 id = "303cccafaa72488790b03478a4207f2a"
 preview_id = "f2a89271912e452889f04806b4c10667"
 
+# D1 — general-purpose cross-shop database.
+# Current tables: feedback, upvotes.
+# Run `wrangler d1 create firstbridge-db` to create, then paste the
+# database_id returned by that command in place of the placeholder below.
+[[d1_databases]]
+binding = "FEEDBACK_DB"
+database_name = "firstbridge-db"
+database_id = "4447d6f6-d82d-488e-ac47-506bef73ba60"
+
 [observability]
 enabled = true
 

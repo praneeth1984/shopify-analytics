@@ -46,12 +46,21 @@ on every free-tier view.
 
 ## Hard Constraints (do not violate)
 
-- **No database.** Shopify is the source of truth; configuration and snapshots live in shop
-  metafields under namespace `firstbridge_analytics`. Heavy aggregations run via Shopify's
-  bulk operations API. If you find yourself wanting to add Postgres / Redis / Mongo, stop and
-  raise the question — the answer is almost certainly "use a metafield" or "compute on demand."
-- **Stateless backend only.** Cloudflare Workers. OAuth, webhook verification, Billing
-  API calls, GraphQL proxying, AI calls. No persistent server state.
+- **D1 for cross-shop data; metafields for per-shop data.** Shopify is the source of truth
+  for merchant analytics; per-shop configuration and snapshots live in shop metafields under
+  namespace `firstbridge_analytics`. Use Cloudflare D1 only for data that is inherently
+  cross-shop (feedback submissions, aggregate platform stats, admin-only records) or where
+  full SQL queryability across all installs is required. Never use Postgres, Redis, or Mongo
+  — D1 is the only permitted external database. If you find yourself reaching for a second
+  D1 database or a new category of cross-shop storage, stop and raise the question first.
+- **D1 shop isolation is mandatory.** Every D1 table that stores shop-scoped data must have
+  a `shop_domain TEXT NOT NULL` column. Every query against such a table must bind
+  `shop_domain` from the verified JWT — never from the request body, query params, or any
+  merchant-controlled input. See **D1 Data Isolation** under Conventions for the enforced
+  pattern. Violations are a security issue, not a style issue.
+- **Stateless request handling.** Cloudflare Workers handle OAuth, webhook verification,
+  Billing API calls, GraphQL proxying, and AI calls with no in-memory state between requests.
+  D1 and KV are the only persistence layers; no in-process caches, no sticky sessions.
 - **Free tier must deliver real value alone.** Do not gate basic metrics behind paid tiers.
   Gate *history depth*, *automation*, *AI*, and *multi-store* — never the headline numbers.
 - **Built for Shopify checklist compliance from day one.** Performance, accessibility, and
@@ -72,19 +81,24 @@ Shopify Store
    |     - /webhooks/*                       HMAC-verified webhooks
    |     - /api/metrics/*                    GraphQL proxy + transforms
    |     - /api/billing/*                    Billing API (Phase 2)
+   |     - /api/feedback/*                   Feedback & roadmap (D1-backed)
    |     - /api/ai/*                         Claude API (Phase 3)
    |
-   +-- Shop metafields (namespace: firstbridge_analytics)
-         - config.preferences        user prefs (date range, currency, layout, dismissals)
-         - cogs.meta                 pointer record: totalCount, shardCount, defaultMarginPct,
-                                     lastWriteAt, currency_code (small, read first per request)
-         - cogs.index                Free-tier COGS blob: ≤20 entries in one ~5KB metafield
-         - cogs.shard.{n}            Pro-tier COGS shards: ≤200 entries each, n in 0..49
-         - snapshot.daily            rolling 90-day metric cache (Phase 1.5)
-         - snapshot.weekly           rolling 12-month aggregate (Phase 2)
-         - plan                      DENORMALIZED CACHE ONLY — Billing API is the source of
-                                     truth (see "Plan resolution" below). Free | Pro.
-         - ai.last_summary           cached weekly brief (Phase 3)
+   +-- Shop metafields (namespace: firstbridge_analytics)   ← per-shop config & cache
+   |     - config.preferences        user prefs (date range, currency, layout, dismissals)
+   |     - cogs.meta                 pointer record: totalCount, shardCount, defaultMarginPct,
+   |                                 lastWriteAt, currency_code (small, read first per request)
+   |     - cogs.index                Free-tier COGS blob: ≤20 entries in one ~5KB metafield
+   |     - cogs.shard.{n}            Pro-tier COGS shards: ≤200 entries each, n in 0..49
+   |     - snapshot.daily            rolling 90-day metric cache (Phase 1.5)
+   |     - snapshot.weekly           rolling 12-month aggregate (Phase 2)
+   |     - plan                      DENORMALIZED CACHE ONLY — Billing API is the source of
+   |                                 truth (see "Plan resolution" below). Free | Pro.
+   |     - ai.last_summary           cached weekly brief (Phase 3)
+   |
+   +-- Cloudflare D1 (firstbridge-db)                       ← cross-shop data
+         - feedback                  bug reports + feature requests (all shops)
+         - upvotes                   per-shop upvote state (shop_domain FK)
 ```
 
 ### Plan resolution (R1.1)
@@ -133,6 +147,10 @@ persist offline tokens.
   App Bridge session tokens, HMAC-SHA256 for OAuth callback (hex) and webhooks (base64),
   Token Exchange and Authorization-Code Grant via raw `fetch`. We deliberately avoid
   `@shopify/shopify-api` so the bundle stays small and Workers-native.
+- **Database:** Cloudflare D1 (SQLite at the edge) for cross-shop data. Single database
+  `firstbridge-db`, bound to the Worker as `FEEDBACK_DB`. Local dev uses wrangler's `--local`
+  D1 replica; migrations live in `backend/migrations/*.sql` and are applied with
+  `wrangler d1 migrations apply firstbridge-db --remote`.
 - **AI (Phase 3):** `@anthropic-ai/sdk`, Claude Sonnet 4.6, **prompt caching enabled** on
   system prompt + dashboard schema (most tokens are cacheable across stores).
 - **Testing:** Vitest for unit/integration, Playwright for embedded-app E2E.
@@ -295,10 +313,11 @@ What ships in the repo right now:
 Run `/deploy` inside Claude Code — it executes the full sequence automatically. Manual steps:
 
 1. `pnpm test` — abort on any failure
-2. `cd backend && ./node_modules/.bin/wrangler deploy` — deploy the Worker
-3. `VITE_SHOPIFY_API_KEY=da5013ca68c07cace1f4bb8570b20af0 pnpm --filter @fbc/app build` — Vite production build
-4. `cd backend && ./node_modules/.bin/wrangler pages deploy ../app/dist --project-name firstbridge-analytics --branch main` — deploy to Pages
-5. `shopify app deploy --allow-updates` — sync `shopify.app.toml` to the Partner dashboard (scopes, webhooks, redirect URLs); idempotent, required when `shopify.app.toml` changes
+2. `cd backend && ./node_modules/.bin/wrangler d1 migrations apply firstbridge-db --remote` — apply pending D1 migrations; abort if this fails
+3. `cd backend && ./node_modules/.bin/wrangler deploy` — deploy the Worker
+4. `VITE_SHOPIFY_API_KEY=da5013ca68c07cace1f4bb8570b20af0 pnpm --filter @fbc/app build` — Vite production build
+5. `cd backend && ./node_modules/.bin/wrangler pages deploy ../app/dist --project-name firstbridge-analytics --branch main` — deploy to Pages
+6. `shopify app deploy --allow-updates` — sync `shopify.app.toml` to the Partner dashboard (scopes, webhooks, redirect URLs); idempotent, required when `shopify.app.toml` changes
 
 **Targets:**
 - Worker: `https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev`
@@ -338,6 +357,74 @@ the Worker via `wrangler secret put`. KV namespace IDs are real values in `wrang
 - **Money:** store as { amount: string, currency_code: string } pairs everywhere — never
   bare numbers — to match Shopify's GraphQL types.
 - **No telemetry / analytics on the merchant by default.** Privacy is part of the value prop.
+
+### D1 Data Isolation (replicating RLS at the application layer)
+
+D1 (SQLite) has no native row-level security. We enforce shop isolation explicitly in every
+query. Treat these rules the same as HMAC webhook verification — they are security
+requirements, not style preferences.
+
+**Rule 1 — `shop_domain` column on every shop-scoped table.**
+Any D1 table whose rows belong to a specific shop must declare:
+```sql
+shop_domain TEXT NOT NULL
+```
+Tables that are genuinely global (e.g. a `schema_migrations` table) are exempt.
+
+**Rule 2 — `shop_domain` is always bound from the verified JWT.**
+The `shop_domain` used to filter or insert rows must be derived from the decoded, verified
+App Bridge session token — never from `c.req.query()`, `c.req.json()`, or any other
+merchant-controlled input. The auth middleware already extracts and attaches `shop` to the
+Hono context; use that value exclusively.
+
+```ts
+// CORRECT — shop from verified context
+const shop = c.get('shop');                         // set by authMiddleware after JWT verify
+const rows = await db.prepare(
+  'SELECT * FROM feedback WHERE shop_domain = ?'
+).bind(shop).all();
+
+// WRONG — shop from request body (merchant-controlled, never trust)
+const { shop } = await c.req.json();
+const rows = await db.prepare(
+  'SELECT * FROM feedback WHERE shop_domain = ?'
+).bind(shop).all();                                 // ← shop isolation bypass
+```
+
+**Rule 3 — prepared statements only; no string interpolation.**
+All D1 queries must use `db.prepare('…').bind(…)`. String-interpolating any value into a
+SQL query is forbidden, regardless of where the value came from.
+
+**Rule 4 — a `forShop` helper wraps every shop-scoped binding.**
+Create `backend/src/db/client.ts` that exports a thin wrapper:
+```ts
+export function forShop(db: D1Database, shop: string) {
+  return {
+    query<T>(sql: string, ...params: unknown[]) {
+      // prepends shop_domain check; forces callers to stay in the shop's lane
+      return db.prepare(sql).bind(shop, ...params).all<T>();
+    },
+    run(sql: string, ...params: unknown[]) {
+      return db.prepare(sql).bind(shop, ...params).run();
+    },
+  };
+}
+```
+Route handlers call `forShop(env.FEEDBACK_DB, shop)` once at the top; they never call
+`env.FEEDBACK_DB.prepare(…)` directly. This makes isolation auditable in code review —
+any direct `env.FEEDBACK_DB` access outside `db/client.ts` is an immediate red flag.
+(The binding is named `FEEDBACK_DB` today; rename it to `APP_DB` when a second table
+category lands, to avoid confusion.)
+
+**Rule 5 — isolation must be tested.**
+Every D1-backed route needs at minimum one test that inserts rows for two different shops
+and asserts the response for shop A contains no rows belonging to shop B. This is the
+D1 equivalent of the HMAC tampered-payload rejection tests on webhooks.
+
+**Rule 6 — `app/uninstalled` webhook deletes all D1 rows for the shop.**
+The `webhooks/app/uninstalled` handler must issue a `DELETE FROM <table> WHERE shop_domain = ?`
+for every shop-scoped D1 table. This mirrors the existing KV key purge and complies with
+GDPR shop/redact semantics.
 
 ## Development Practices
 

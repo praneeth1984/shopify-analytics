@@ -26,4 +26,7 @@ export type Env = {
   //   - plan:{shop_domain}        30s Billing-API plan cache
   //   - bulk:{shop_domain}:{...}  bulk-operation polling cursors (Phase 1.5)
   BULK_OPS_KV: KVNamespace;
+
+  // D1 — cross-shop feedback storage
+  FEEDBACK_DB: D1Database;
 };

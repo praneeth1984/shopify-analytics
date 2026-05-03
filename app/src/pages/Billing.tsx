@@ -49,7 +49,7 @@ const PLANS: PlanCard[] = [
   },
   {
     name: "AI",
-    price: "$9.99 / month",
+    price: "$59.99 / month",
     description: "Everything in Pro, plus AI-powered insights and recommendations.",
     features: [
       "Weekly AI performance brief",

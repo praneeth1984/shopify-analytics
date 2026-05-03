@@ -3,7 +3,7 @@ import { Page, Tabs } from "@shopify/polaris";
 import { navigate } from "../../App.js";
 import { BreakEvenCalculator } from "./BreakEven.js";
 import { PLReportPage } from "./PLReport.js";
-import { ComingSoon } from "../../components/ComingSoon.js";
+import { ProfitDashboard } from "./ProfitDashboard.js";
 import { useProfit } from "../../hooks/useProfit.js";
 import type { DateRangePreset } from "@fbc/shared";
 
@@ -32,10 +32,14 @@ export function ProfitSection() {
     navigate(ROUTES[idx] ?? "/profit");
   }
 
+  function goSettings() {
+    navigate("/settings");
+  }
+
   return (
     <Page title="Profit" fullWidth>
       <Tabs tabs={TABS} selected={selected} onSelect={handleTabChange}>
-        {selected === 0 && <ComingSoon feature="Net Profit Dashboard with Ad Spend & Expenses" phase="Phase 2" />}
+        {selected === 0 && <ProfitDashboard onSetupCogs={goSettings} />}
         {selected === 1 && <PLReportPage />}
         {selected === 2 && (
           <BreakEvenCalculator profit={profit.data} loading={profit.loading} />
