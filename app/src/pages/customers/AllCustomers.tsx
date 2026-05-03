@@ -40,7 +40,7 @@ const SORT_KEYS: Array<keyof CustomerRow | null> = [
 
 function sortRows(rows: CustomerRow[], colIdx: number, dir: SortDirection): CustomerRow[] {
   const key = SORT_KEYS[colIdx];
-  if (key === null) return rows;
+  if (key == null) return rows;
   const mul = dir === "ascending" ? 1 : -1;
   return [...rows].sort((a, b) => {
     const av = a[key], bv = b[key];
