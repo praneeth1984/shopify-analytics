@@ -10,6 +10,7 @@ import {
   Box,
   Badge,
 } from "@shopify/polaris";
+import { navigate } from "../App.js";
 
 export function About() {
   return (
@@ -121,11 +122,11 @@ export function About() {
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">Support</Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Found a bug or have a feature request? Use the{" "}
-                  <Text as="span" fontWeight="semibold">Feedback</Text> tab in the nav
-                  — it goes straight to us. For urgent issues, email{" "}
+                  Found a bug or have a feature request? It goes straight to us.
+                  For urgent issues, email{" "}
                   <Text as="span" fontWeight="semibold">support@firstbridgeconsulting.com</Text>.
                 </Text>
+                <Button onClick={() => navigate("/feedback")}>Send feedback</Button>
                 <Text as="p" variant="bodyMd" tone="subdued">
                   We respond within one business day.
                 </Text>

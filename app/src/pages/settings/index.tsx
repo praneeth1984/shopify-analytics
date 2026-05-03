@@ -32,6 +32,11 @@ export function SettingsSection() {
     <Page
       title="Settings"
       subtitle="Tell us what your products cost so we can show profit, not just revenue."
+      secondaryActions={[
+        { content: "Plan & billing", onAction: () => navigate("/billing") },
+        { content: "About", onAction: () => navigate("/about") },
+        { content: "Send feedback", onAction: () => navigate("/feedback") },
+      ]}
     >
       <Tabs tabs={TABS} selected={selected} onSelect={handleTabChange}>
         {selected === 0 && <CogsSettingsTab />}

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Page, Tabs, Card, BlockStack, Text, InlineStack, Badge, Button, TextField } from "@shopify/polaris";
 import type { DateRangePreset } from "@fbc/shared";
 import { navigate } from "../../App.js";
-import { ComingSoon } from "../../components/ComingSoon.js";
 import { RangePicker } from "../../components/RangePicker.js";
+import { PaymentsPage } from "../marketing/Payments.js";
 import { ExportButton } from "../../components/ExportButton.js";
 import { OrderReportPage } from "./OrderReport.js";
 import { RefundReportPage } from "./RefundReport.js";
@@ -20,28 +20,13 @@ import { BillingLocationPage } from "./BillingLocation.js";
 const TABS = [
   { id: "reports", content: "Reports", panelID: "reports-panel" },
   { id: "export", content: "Export", panelID: "export-panel" },
-  { id: "digest", content: "Scheduled Digest", panelID: "digest-panel" },
-  { id: "saved", content: "Saved Views", panelID: "saved-panel" },
-  { id: "filters", content: "Filters", panelID: "filters-panel" },
-  { id: "sheets", content: "Google Sheets", panelID: "sheets-panel" },
 ];
 
-const ROUTES = [
-  "/reports",
-  "/reports/export",
-  "/reports/digest",
-  "/reports/saved",
-  "/reports/filters",
-  "/reports/sheets",
-];
+const ROUTES = ["/reports", "/reports/export"];
 
 function getInitialTab(): number {
   const path = window.location.pathname;
   if (path.startsWith("/reports/export")) return 1;
-  if (path.startsWith("/reports/digest")) return 2;
-  if (path.startsWith("/reports/saved")) return 3;
-  if (path.startsWith("/reports/filters")) return 4;
-  if (path.startsWith("/reports/sheets")) return 5;
   return 0;
 }
 
@@ -93,78 +78,106 @@ const EXPORT_PANELS = [
   },
 ] as const;
 
-const REPORTS_INDEX = [
+type ReportEntry = { title: string; description: string; href: string };
+type ReportSection = { section: string; reports: ReportEntry[] };
+
+const REPORTS_INDEX: ReportSection[] = [
   {
-    title: "Order Report",
-    description: "Raw rows for every order. Filter by payment and fulfillment status, deep-link to the Shopify admin.",
-    href: "/reports/orders",
+    section: "Operations",
+    reports: [
+      {
+        title: "Order Report",
+        description: "Raw rows for every order. Filter by payment and fulfillment status, deep-link to the Shopify admin.",
+        href: "/reports/orders",
+      },
+      {
+        title: "Refund Report",
+        description: "Refund-level detail with totals, items refunded, restock status, and notes.",
+        href: "/reports/refunds",
+      },
+      {
+        title: "Fulfillment Report",
+        description: "Unfulfilled, stuck, and partial orders with fulfillment timing and shipping performance.",
+        href: "/reports/fulfillment",
+      },
+      {
+        title: "Outstanding Payments",
+        description: "Orders with pending, authorized, or partially paid status and total amount owed.",
+        href: "/reports/outstanding",
+      },
+    ],
   },
   {
-    title: "Refund Report",
-    description: "Refund-level detail with totals, items refunded, restock status, and notes.",
-    href: "/reports/refunds",
+    section: "Financial",
+    reports: [
+      {
+        title: "Tax Report",
+        description: "Monthly tax summary and breakdown by country/state for filing reference.",
+        href: "/reports/tax",
+      },
+      {
+        title: "Payout Report",
+        description: "Shopify Payments payout history with gross, fees, and net per payout.",
+        href: "/reports/payouts",
+      },
+      {
+        title: "Payment Method Mix",
+        description: "Revenue breakdown and estimated processing fees per payment gateway.",
+        href: "/reports/payments",
+      },
+      {
+        title: "Transaction Report",
+        description: "Payment transactions by gateway with success rates, failure counts, and total value.",
+        href: "/reports/transactions",
+      },
+      {
+        title: "Gift Cards",
+        description: "Outstanding gift card liability, expired/unused cards, and issuance history.",
+        href: "/reports/gift-cards",
+      },
+      {
+        title: "Billing Location & Currency",
+        description: "Sales breakdown by customer billing country and checkout presentment currency.",
+        href: "/reports/billing-location",
+      },
+    ],
   },
   {
-    title: "Order vs Return (Monthly)",
-    description: "Monthly orders and returned orders with return-rate trend over time.",
-    href: "/reports/returns-monthly",
-  },
-  {
-    title: "Tax Report",
-    description: "Monthly tax summary and breakdown by country/state for filing reference.",
-    href: "/reports/tax",
-  },
-  {
-    title: "Payout Report",
-    description: "Shopify Payments payout history with gross, fees, and net per payout.",
-    href: "/reports/payouts",
-  },
-  {
-    title: "Gift Cards",
-    description: "Outstanding gift card liability, expired/unused cards, and issuance history.",
-    href: "/reports/gift-cards",
-  },
-  {
-    title: "Fulfillment Report",
-    description: "Unfulfilled, stuck, and partial orders with fulfillment timing and shipping performance.",
-    href: "/reports/fulfillment",
-  },
-  {
-    title: "Transaction Report",
-    description: "Payment transactions by gateway with success rates, failure counts, and total value.",
-    href: "/reports/transactions",
-  },
-  {
-    title: "Outstanding Payments",
-    description: "Orders with pending, authorized, or partially paid status and total amount owed.",
-    href: "/reports/outstanding",
-  },
-  {
-    title: "Tag Reports",
-    description: "Revenue and order metrics grouped by order tags, product tags, or customer tags.",
-    href: "/reports/tags",
-  },
-  {
-    title: "Billing Location & Currency",
-    description: "Sales breakdown by customer billing country and checkout presentment currency.",
-    href: "/reports/billing-location",
+    section: "Returns & Tags",
+    reports: [
+      {
+        title: "Order vs Return (Monthly)",
+        description: "Monthly orders and returned orders with return-rate trend over time.",
+        href: "/reports/returns-monthly",
+      },
+      {
+        title: "Tag Reports",
+        description: "Revenue and order metrics grouped by order tags, product tags, or customer tags.",
+        href: "/reports/tags",
+      },
+    ],
   },
 ];
 
 function ReportsIndexPage() {
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
+  const filteredSections = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return REPORTS_INDEX;
-    return REPORTS_INDEX.filter(
-      (r) => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q),
-    );
+    return REPORTS_INDEX.map((s) => ({
+      ...s,
+      reports: s.reports.filter(
+        (r) => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q),
+      ),
+    })).filter((s) => s.reports.length > 0);
   }, [query]);
+
+  const totalMatches = filteredSections.reduce((acc, s) => acc + s.reports.length, 0);
 
   return (
     <Page title="Reports" subtitle="Pre-built reports for the questions merchants ask most">
-      <BlockStack gap="400">
+      <BlockStack gap="500">
         <TextField
           label="Search reports"
           labelHidden
@@ -176,22 +189,27 @@ function ReportsIndexPage() {
           autoComplete="off"
         />
 
-        {filtered.length === 0 && (
+        {totalMatches === 0 && (
           <Card>
             <Text as="p" tone="subdued">No reports match "{query}".</Text>
           </Card>
         )}
 
-        {filtered.map((r) => (
-          <Card key={r.href}>
-            <InlineStack align="space-between" blockAlign="center" wrap>
-              <BlockStack gap="100">
-                <Text as="h3" variant="headingSm">{r.title}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">{r.description}</Text>
-              </BlockStack>
-              <Button onClick={() => navigate(r.href)}>Open</Button>
-            </InlineStack>
-          </Card>
+        {filteredSections.map((section) => (
+          <BlockStack key={section.section} gap="300">
+            <Text as="h2" variant="headingMd">{section.section}</Text>
+            {section.reports.map((r) => (
+              <Card key={r.href}>
+                <InlineStack align="space-between" blockAlign="center" wrap>
+                  <BlockStack gap="100">
+                    <Text as="h3" variant="headingSm">{r.title}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{r.description}</Text>
+                  </BlockStack>
+                  <Button onClick={() => navigate(r.href)}>Open</Button>
+                </InlineStack>
+              </Card>
+            ))}
+          </BlockStack>
         ))}
       </BlockStack>
     </Page>
@@ -246,6 +264,7 @@ export function ReportsSection() {
   if (path.startsWith("/reports/returns-monthly")) return <MonthlyReturnsPage />;
   if (path.startsWith("/reports/tax")) return <TaxReportPage />;
   if (path.startsWith("/reports/payouts")) return <PayoutsPage />;
+  if (path.startsWith("/reports/payments")) return <PaymentsPage />;
   if (path.startsWith("/reports/gift-cards")) return <GiftCardsPage />;
   if (path.startsWith("/reports/fulfillment")) return <FulfillmentReportPage />;
   if (path.startsWith("/reports/transactions")) return <TransactionReportPage />;
@@ -269,10 +288,6 @@ function ReportsTabsPage() {
       <Tabs tabs={TABS} selected={selected} onSelect={handleTabChange}>
         {selected === 0 && <ReportsIndexPage />}
         {selected === 1 && <ExportInfoPage />}
-        {selected === 2 && <ComingSoon feature="Scheduled Email Digest" />}
-        {selected === 3 && <ComingSoon feature="Saved Report Views" />}
-        {selected === 4 && <ComingSoon feature="Tag & Metafield Filtering" phase="Phase 3" />}
-        {selected === 5 && <ComingSoon feature="Google Sheets Live Sync" phase="Phase 3" />}
       </Tabs>
     </Page>
   );
