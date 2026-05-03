@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Page, Button, Toast, Frame } from "@shopify/polaris";
+import { Page, Toast, Frame } from "@shopify/polaris";
 import { Dashboard } from "./pages/Dashboard.js";
 import { apiFetch } from "./lib/api.js";
 
@@ -20,6 +20,7 @@ import { CustomersSection } from "./pages/customers/index.js";
 import { MarketingSection } from "./pages/marketing/index.js";
 import { ReportsSection } from "./pages/reports/index.js";
 import { Feedback } from "./pages/Feedback.js";
+import { About } from "./pages/About.js";
 
 type Route =
   | "dashboard"
@@ -30,7 +31,8 @@ type Route =
   | "customers"
   | "marketing"
   | "reports"
-  | "feedback";
+  | "feedback"
+  | "about";
 
 function readRoute(): Route {
   if (typeof window === "undefined") return "dashboard";
@@ -45,6 +47,7 @@ function readRoute(): Route {
   if (path.startsWith("/marketing")) return "marketing";
   if (path.startsWith("/reports")) return "reports";
   if (path.startsWith("/feedback")) return "feedback";
+  if (path.startsWith("/about")) return "about";
   return "dashboard";
 }
 
@@ -96,6 +99,7 @@ export function App() {
   if (route === "marketing") return <MarketingSection />;
   if (route === "reports") return <ReportsSection />;
   if (route === "feedback") return <Feedback />;
+  if (route === "about") return <About />;
 
   return (
     <Frame>
