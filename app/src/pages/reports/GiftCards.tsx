@@ -25,7 +25,7 @@ type GiftCardRow = {
   initialValueCurrency: string;
   balanceAmount: string;
   balanceCurrency: string;
-  usageCount: number;
+  hasBeenUsed: boolean;
   expiresOn: string | null;
   createdAt: string;
   hasCustomer: boolean;
@@ -56,14 +56,14 @@ function GiftCardTable({ rows }: { rows: GiftCardRow[] }) {
   return (
     <>
       <DataTable
-        columnContentTypes={["text","text","text","text","numeric","text"]}
-        headings={["Last 4","Initial value","Balance","Expires","Uses","Created"]}
+        columnContentTypes={["text","text","text","text","text","text"]}
+        headings={["Last 4","Initial value","Balance","Expires","Used","Created"]}
         rows={pg.page.map((r) => [
           `****${r.lastCharacters}`,
           formatMoney({ amount: r.initialValueAmount, currency_code: r.initialValueCurrency }),
           formatMoney({ amount: r.balanceAmount, currency_code: r.balanceCurrency }),
           r.expiresOn ?? "No expiry",
-          r.usageCount,
+          r.hasBeenUsed ? "Yes" : "No",
           r.createdAt.slice(0, 10),
         ])}
       />

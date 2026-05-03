@@ -9,17 +9,21 @@
  */
 
 import type { GraphQLClient } from "../shopify/graphql-client.js";
+import { HttpError } from "../lib/errors.js";
 import { ORDERS_OVERVIEW_QUERY } from "./queries.js";
 import type { OrderNode } from "./queries.js";
 
 export const PAGE_SIZE = 250;
 export const MAX_PAGES = 10; // 2,500 orders per range — safe budget for Phase 1.
 
-// Retry budget for transient Shopify HTTP errors (e.g. 429 from concurrent token
-// exchanges in dev, or brief 5xx from the Admin API). Only the first page of
-// each pagination round is retried; subsequent pages use a fresh cursor anyway.
-const RETRY_DELAY_MS = 600;
-const MAX_RETRIES = 1;
+// Transient-error retry config.
+const RETRY_DELAY_MS = 600;       // non-throttle errors (brief 5xx, concurrent 429s)
+const THROTTLE_DELAY_MS = 2_000;  // Shopify restores ~50 pts/s; 2 s recovers ~100 pts
+const MAX_RETRIES = 3;            // up to 3 retries (2+4+6 s for consecutive throttles)
+
+function isThrottled(err: unknown): boolean {
+  return err instanceof HttpError && err.message === "THROTTLED";
+}
 
 type OrdersResp = {
   orders: {
@@ -40,7 +44,11 @@ async function fetchPage(
       return data;
     } catch (err) {
       if (attempt < MAX_RETRIES) {
-        await new Promise<void>((r) => setTimeout(r, RETRY_DELAY_MS));
+        // Linear backoff for throttle (2s, 4s, 6s); flat delay for other transients.
+        const delay = isThrottled(err)
+          ? THROTTLE_DELAY_MS * (attempt + 1)
+          : RETRY_DELAY_MS;
+        await new Promise<void>((r) => setTimeout(r, delay));
         continue;
       }
       throw err;

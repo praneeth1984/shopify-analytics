@@ -12,7 +12,6 @@ const GIFT_CARDS_QUERY = /* GraphQL */ `
         expiresOn
         createdAt
         lastCharacters
-        usageCount
         customer { id }
       }
     }
@@ -37,7 +36,7 @@ export type GiftCardRow = {
   initialValueCurrency: string;
   balanceAmount: string;
   balanceCurrency: string;
-  usageCount: number;
+  hasBeenUsed: boolean;
   expiresOn: string | null;
   createdAt: string;
   hasCustomer: boolean;
@@ -60,7 +59,6 @@ type GiftCardNode = {
   expiresOn: string | null;
   createdAt: string;
   lastCharacters: string;
-  usageCount: number;
   customer: { id: string } | null;
 };
 
@@ -128,7 +126,7 @@ export async function computeGiftCards(
     initialValueCurrency: c.initialValue?.currencyCode ?? currency,
     balanceAmount: c.balance?.amount ?? "0",
     balanceCurrency: c.balance?.currencyCode ?? currency,
-    usageCount: c.usageCount ?? 0,
+    hasBeenUsed: parseFloat(c.balance?.amount ?? "0") < parseFloat(c.initialValue?.amount ?? "0"),
     expiresOn: c.expiresOn ?? null,
     createdAt: c.createdAt,
     hasCustomer: !!c.customer,
@@ -136,7 +134,7 @@ export async function computeGiftCards(
 
   const expiredOrUnused = cards.filter((c) => {
     const expired = c.expiresOn ? new Date(c.expiresOn) < now : false;
-    const unused = (c.usageCount ?? 0) === 0 && parseFloat(c.balance?.amount ?? "0") > 0;
+    const unused = parseFloat(c.balance?.amount ?? "0") >= parseFloat(c.initialValue?.amount ?? "0");
     return expired || unused;
   }).map(toRow);
 
