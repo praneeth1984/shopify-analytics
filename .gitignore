@@ -15,3 +15,8 @@ build/
 coverage/
 *.tsbuildinfo
 .claude/worktrees/
+
+# Playwright
+app/playwright/.auth/*.json
+app/test-results/
+app/playwright-report/
