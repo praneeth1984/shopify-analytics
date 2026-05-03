@@ -20,6 +20,7 @@ import { resolveRange } from "../metrics/date-range.js";
 import { clampRangeForPlan } from "../metrics/history-clamp.js";
 import { getPlanCached } from "../plan/get-plan.js";
 import { fetchOrderReportPage } from "../metrics/orders-report.js";
+import { computeOutstandingPayments } from "../metrics/outstanding.js";
 import { BadRequest } from "../lib/errors.js";
 import type {
   DateRangePreset,
@@ -85,6 +86,12 @@ export function metricsOrdersRoutes() {
       fulfillment,
       cursor,
     });
+    return c.json(result);
+  });
+
+  app.get("/outstanding", async (c) => {
+    const graphql = c.get("graphql");
+    const result = await computeOutstandingPayments(graphql);
     return c.json(result);
   });
 

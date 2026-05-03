@@ -430,6 +430,431 @@ export type RefundReportOrderNode = {
 };
 
 /**
+ * F31 + F48 — Fulfillment Operations query.
+ *
+ * Lightweight order shape focused on fulfillment-state fields. Used by the
+ * unfulfilled / stuck / partial / performance / shipping views. Kept separate
+ * from ORDERS_OVERVIEW_QUERY so the fulfillment endpoint doesn't pay for the
+ * line-item / refund payload it doesn't need.
+ */
+export const ORDERS_FULFILLMENT_QUERY = /* GraphQL */ `
+  query OrdersFulfillment($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        name
+        createdAt
+        displayFinancialStatus
+        displayFulfillmentStatus
+        currentSubtotalLineItemsQuantity
+        totalPriceSet { shopMoney { amount currencyCode } }
+        fulfillments(first: 5) {
+          createdAt
+          status
+        }
+        shippingLines(first: 5) {
+          edges {
+            node {
+              title
+              source
+              carrierIdentifier
+              code
+              discountedPriceSet { shopMoney { amount currencyCode } }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export type FulfillmentNode = { createdAt: string; status: string | null };
+
+export type FulfillmentShippingLineNode = {
+  title: string | null;
+  source: string | null;
+  carrierIdentifier: string | null;
+  code: string | null;
+  discountedPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+};
+
+export type FulfillmentOrderNode = {
+  id: string;
+  name: string;
+  createdAt: string;
+  displayFinancialStatus: string | null;
+  displayFulfillmentStatus: string | null;
+  currentSubtotalLineItemsQuantity: number;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  fulfillments: FulfillmentNode[];
+  shippingLines: { edges: Array<{ node: FulfillmentShippingLineNode }> };
+};
+
+/**
+ * F33 — Sales Attribution query (vendor / type / channel / pos location).
+ *
+ * Lightweight order shape with `lineItems.product.{vendor, productType}`
+ * and channel-attribution fields. Avoids the full overview payload so the
+ * attribution endpoint stays under the cost ceiling.
+ */
+export const ORDERS_ATTRIBUTION_QUERY = /* GraphQL */ `
+  query OrdersAttribution($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        sourceName
+        physicalLocation { id name }
+        totalPriceSet { shopMoney { amount currencyCode } }
+        totalRefundedSet { shopMoney { amount currencyCode } }
+        returnStatus
+        lineItems(first: 50) {
+          edges {
+            node {
+              quantity
+              refundableQuantity
+              originalTotalSet { shopMoney { amount currencyCode } }
+              product {
+                id
+                vendor
+                productType
+              }
+            }
+          }
+        }
+        refunds {
+          refundLineItems(first: 50) {
+            edges {
+              node {
+                quantity
+                lineItem {
+                  id
+                  product { id vendor productType }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export type AttributionLineItemNode = {
+  quantity: number;
+  refundableQuantity: number;
+  originalTotalSet: { shopMoney: { amount: string; currencyCode: string } };
+  product: { id: string; vendor: string | null; productType: string | null } | null;
+};
+
+export type AttributionRefundLineItemNode = {
+  quantity: number;
+  lineItem: {
+    id: string;
+    product: { id: string; vendor: string | null; productType: string | null } | null;
+  } | null;
+};
+
+export type AttributionOrderNode = {
+  id: string;
+  sourceName: string | null;
+  physicalLocation: { id: string; name: string } | null;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  returnStatus: string | null;
+  lineItems: { edges: Array<{ node: AttributionLineItemNode }> };
+  refunds: Array<{
+    refundLineItems: { edges: Array<{ node: AttributionRefundLineItemNode }> };
+  }>;
+};
+
+/**
+ * F44 — Sales by Variant query.
+ *
+ * Adds `variant.title` and `lineItem.sku` to the line-item shape. Reuses the
+ * ORDERS_OVERVIEW_QUERY semantics but kept separate to keep that query cost low.
+ */
+export const ORDERS_VARIANT_QUERY = /* GraphQL */ `
+  query OrdersVariant($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        lineItems(first: 50) {
+          edges {
+            node {
+              id
+              quantity
+              sku
+              variant {
+                id
+                title
+                sku
+              }
+              product { id title }
+              originalTotalSet { shopMoney { amount currencyCode } }
+              discountedUnitPriceSet { shopMoney { amount currencyCode } }
+            }
+          }
+        }
+        refunds {
+          refundLineItems(first: 50) {
+            edges {
+              node {
+                quantity
+                lineItem {
+                  id
+                  variant { id }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export type VariantLineItemNode = {
+  id: string;
+  quantity: number;
+  sku: string | null;
+  variant: { id: string; title: string | null; sku: string | null } | null;
+  product: { id: string; title: string } | null;
+  originalTotalSet: { shopMoney: { amount: string; currencyCode: string } };
+  discountedUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+};
+
+export type VariantRefundLineItemNode = {
+  quantity: number;
+  lineItem: {
+    id: string;
+    variant: { id: string } | null;
+  } | null;
+};
+
+export type VariantOrderNode = {
+  id: string;
+  lineItems: { edges: Array<{ node: VariantLineItemNode }> };
+  refunds: Array<{
+    refundLineItems: { edges: Array<{ node: VariantRefundLineItemNode }> };
+  }>;
+};
+
+/**
+ * F49 — Tag Reports query.
+ *
+ * Lightweight query that includes order tags and customer tags. Product tags
+ * are not on Order — they're nested via lineItem.product.tags.
+ */
+export const ORDERS_TAGS_QUERY = /* GraphQL */ `
+  query OrdersTags($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        tags
+        totalPriceSet { shopMoney { amount currencyCode } }
+        customer {
+          id
+          tags
+          amountSpent { amount currencyCode }
+        }
+        lineItems(first: 50) {
+          edges {
+            node {
+              quantity
+              originalTotalSet { shopMoney { amount currencyCode } }
+              product {
+                id
+                tags
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export type TagsLineItemNode = {
+  quantity: number;
+  originalTotalSet: { shopMoney: { amount: string; currencyCode: string } };
+  product: { id: string; tags: string[] } | null;
+};
+
+export type TagsCustomerNode = {
+  id: string;
+  tags: string[];
+  amountSpent: { amount: string; currencyCode: string } | null;
+};
+
+export type TagsOrderNode = {
+  id: string;
+  tags: string[];
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  customer: TagsCustomerNode | null;
+  lineItems: { edges: Array<{ node: TagsLineItemNode }> };
+};
+
+/**
+ * F46 — Sales by Billing Location & Currency query.
+ *
+ * Includes billing address country + province and presentment currency rate
+ * + presentment money totals so we can compute revenue in both currencies.
+ */
+export const ORDERS_BILLING_QUERY = /* GraphQL */ `
+  query OrdersBilling($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        presentmentCurrencyCode
+        billingAddress {
+          countryCode
+          country
+          province
+        }
+        totalPriceSet {
+          shopMoney { amount currencyCode }
+          presentmentMoney { amount currencyCode }
+        }
+      }
+    }
+  }
+`;
+
+export type BillingOrderNode = {
+  id: string;
+  presentmentCurrencyCode: string | null;
+  billingAddress: {
+    countryCode: string | null;
+    country: string | null;
+    province: string | null;
+  } | null;
+  totalPriceSet: {
+    shopMoney: { amount: string; currencyCode: string };
+    presentmentMoney: { amount: string; currencyCode: string };
+  };
+};
+
+/**
+ * F51 — Product Catalog query.
+ *
+ * Walks the products connection (page size 250). For each product we surface
+ * vendor / type / tags / price range / inventory total / created-at.
+ */
+export const PRODUCTS_CATALOG_QUERY = /* GraphQL */ `
+  query ProductsCatalog($first: Int!, $after: String) {
+    products(first: $first, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        title
+        vendor
+        productType
+        tags
+        createdAt
+        totalInventory
+        priceRangeV2 {
+          minVariantPrice { amount currencyCode }
+          maxVariantPrice { amount currencyCode }
+        }
+      }
+    }
+  }
+`;
+
+export type CatalogProductNode = {
+  id: string;
+  title: string;
+  vendor: string | null;
+  productType: string | null;
+  tags: string[];
+  createdAt: string;
+  totalInventory: number | null;
+  priceRangeV2: {
+    minVariantPrice: { amount: string; currencyCode: string };
+    maxVariantPrice: { amount: string; currencyCode: string };
+  } | null;
+};
+
+/**
+ * F53 — Outstanding Customer Payments query.
+ *
+ * Always live — no date range. Filters to orders where payment is incomplete.
+ */
+export const ORDERS_OUTSTANDING_QUERY = /* GraphQL */ `
+  query OrdersOutstanding($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT, reverse: true) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        name
+        createdAt
+        displayFinancialStatus
+        customer { id }
+        totalOutstandingSet { shopMoney { amount currencyCode } }
+      }
+    }
+  }
+`;
+
+export type OutstandingOrderNode = {
+  id: string;
+  name: string;
+  createdAt: string;
+  displayFinancialStatus: string | null;
+  customer: { id: string } | null;
+  totalOutstandingSet: { shopMoney: { amount: string; currencyCode: string } };
+};
+
+/**
+ * F55 — Transaction Status query.
+ *
+ * Walks orders in the date range and pulls each order's transactions. The
+ * `kind: SALE | CAPTURE | AUTHORIZATION` distinction is preserved on the
+ * transaction shape so the aggregator can choose what to count.
+ */
+export const ORDERS_TRANSACTIONS_QUERY = /* GraphQL */ `
+  query OrdersTransactions($query: String!, $first: Int!, $after: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: PROCESSED_AT) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        name
+        transactions {
+          id
+          gateway
+          kind
+          status
+          errorCode
+          processedAt
+          amountSet { shopMoney { amount currencyCode } }
+        }
+      }
+    }
+  }
+`;
+
+export type TransactionNode = {
+  id: string;
+  gateway: string | null;
+  kind: string;
+  status: string;
+  errorCode: string | null;
+  processedAt: string | null;
+  amountSet: { shopMoney: { amount: string; currencyCode: string } } | null;
+};
+
+export type TransactionOrderNode = {
+  id: string;
+  name: string;
+  transactions: TransactionNode[];
+};
+
+/**
  * Inventory velocity query — fetches product variants with stock levels.
  * Uses productVariants connection (separate from orders), paginated.
  * Capped at 250 variants per page, max 40 pages (10,000 variants budget).

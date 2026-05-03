@@ -6,10 +6,14 @@ import { ProductAffinityPage } from "./Affinity.js";
 import { PriceAnalysisPage } from "./PriceAnalysis.js";
 import { InventoryPage } from "./Inventory.js";
 import { BundlesPage } from "./Bundles.js";
+import { AttributionPage } from "./Attribution.js";
+import { CatalogPage } from "./Catalog.js";
 
 const TABS = [
   { id: "performance", content: "Performance", panelID: "performance-panel" },
   { id: "inventory", content: "Inventory", panelID: "inventory-panel" },
+  { id: "attribution", content: "Attribution", panelID: "attribution-panel" },
+  { id: "catalog", content: "Catalog", panelID: "catalog-panel" },
   { id: "affinity", content: "Affinity", panelID: "affinity-panel" },
   { id: "bundles", content: "Bundles", panelID: "bundles-panel" },
   { id: "price-analysis", content: "Price Analysis", panelID: "price-panel" },
@@ -18,6 +22,8 @@ const TABS = [
 const ROUTES = [
   "/products/performance",
   "/products/inventory",
+  "/products/attribution",
+  "/products/catalog",
   "/products/affinity",
   "/products/bundles",
   "/products/price-analysis",
@@ -42,9 +48,11 @@ export function ProductsSection() {
       <Tabs tabs={TABS} selected={selected} onSelect={handleTabChange}>
         {selected === 0 && <ProductsPerformancePage />}
         {selected === 1 && <InventoryPage />}
-        {selected === 2 && <ProductAffinityPage />}
-        {selected === 3 && <BundlesPage />}
-        {selected === 4 && <PriceAnalysisPage />}
+        {selected === 2 && <AttributionPage />}
+        {selected === 3 && <CatalogPage />}
+        {selected === 4 && <ProductAffinityPage />}
+        {selected === 5 && <BundlesPage />}
+        {selected === 6 && <PriceAnalysisPage />}
       </Tabs>
     </Page>
   );

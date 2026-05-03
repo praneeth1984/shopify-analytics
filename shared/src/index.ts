@@ -778,3 +778,312 @@ export interface SubmitFeedbackRequest {
   severity?: BugSeverity;
   frequency?: FeatureFrequency;
 }
+
+// ---- F31 + F48: Fulfillment Operations ----
+
+export type FulfillmentView =
+  | "unfulfilled"
+  | "stuck"
+  | "partial"
+  | "performance"
+  | "shipping";
+
+export type UnfulfilledOrderRow = {
+  order_id: string;
+  gid: string;
+  name: string;
+  created_at: string;
+  days_waiting: number;
+  item_count: number;
+  total_price: Money;
+  financial_status: string | null;
+};
+
+export type FulfillmentPerformance = {
+  median_fulfillment_days: number | null;
+  pct_within_1d: number;
+  pct_within_3d: number;
+  pct_within_7d: number;
+  total_fulfilled: number;
+};
+
+export type ShippingRow = {
+  order_id: string;
+  gid: string;
+  name: string;
+  carrier: string | null;
+  service: string | null;
+  shipping_charged: Money;
+  carrier_cost: Money | null;
+  shipping_pnl: Money | null;
+};
+
+export type FulfillmentResponse =
+  | {
+      view: "unfulfilled" | "stuck" | "partial";
+      rows: UnfulfilledOrderRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+    }
+  | {
+      view: "performance";
+      performance: FulfillmentPerformance;
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+    }
+  | {
+      view: "shipping";
+      rows: ShippingRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+    };
+
+// ---- F33: Sales Attribution ----
+
+export type SalesAttributionGroupBy =
+  | "vendor"
+  | "type"
+  | "channel"
+  | "pos_location";
+
+export type SalesAttributionRow = {
+  key: string; // vendor name / type / channel / location
+  orders: number;
+  units: number;
+  revenue: Money;
+  aov: Money;
+  return_rate_pct: number; // 0..1
+};
+
+export type SalesAttributionResponse = {
+  range: DateRange;
+  by: SalesAttributionGroupBy;
+  rows: SalesAttributionRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  pro_only: boolean;
+  total_count: number;
+  plan_capped_to: number | null;
+};
+
+// ---- F44: Sales by Variant ----
+
+export type VariantSalesRow = {
+  variant_id: string;
+  product_id: string;
+  product_title: string;
+  variant_title: string | null;
+  sku: string | null;
+  units_sold: number;
+  refunded_units: number;
+  return_rate_pct: number; // 0..1
+  revenue: Money;
+  avg_price: Money;
+};
+
+export type VariantSalesResponse = {
+  range: DateRange;
+  rows: VariantSalesRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  total_count: number;
+  plan_capped_to: number | null;
+};
+
+// ---- F49: Tag Reports ----
+
+export type TagReportType = "order" | "product" | "customer";
+
+export type OrderTagRow = {
+  tag: string;
+  order_count: number;
+  revenue: Money;
+  aov: Money;
+};
+
+export type ProductTagRow = {
+  tag: string;
+  units_sold: number;
+  revenue: Money;
+  products_with_tag: number;
+};
+
+export type CustomerTagRow = {
+  tag: string;
+  customer_count: number;
+  revenue: Money;
+  avg_ltv: Money;
+};
+
+export type TagReportResponse =
+  | {
+      type: "order";
+      range: DateRange;
+      rows: OrderTagRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+      total_count: number;
+      plan_capped_to: number | null;
+    }
+  | {
+      type: "product";
+      range: DateRange;
+      rows: ProductTagRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+      total_count: number;
+      plan_capped_to: number | null;
+    }
+  | {
+      type: "customer";
+      range: DateRange;
+      rows: CustomerTagRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+      total_count: number;
+      plan_capped_to: number | null;
+      pro_only: true;
+    };
+
+// ---- F46: Sales by Billing Location & Currency ----
+
+export type BillingLocationRow = {
+  country_code: string;
+  country_name: string;
+  province: string | null; // null = country-level summary (Free)
+  orders: number;
+  revenue: Money;
+  aov: Money;
+};
+
+export type BillingLocationResponse = {
+  range: DateRange;
+  rows: BillingLocationRow[];
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+  no_billing_address_count: number;
+};
+
+export type CurrencyRow = {
+  currency: string;
+  orders: number;
+  revenue_presentment: Money;
+  revenue_shop: Money;
+  avg_rate: number; // average presentment->shop rate; 1 if same currency
+};
+
+export type CurrencyResponse = {
+  range: DateRange;
+  rows: CurrencyRow[];
+  shop_currency: string;
+  truncated: boolean;
+  history_clamped_to: HistoryClamp | null;
+};
+
+// ---- F51: Product Catalog Reports ----
+
+export type CatalogView = "never_sold" | "all" | "by_tag";
+
+export type CatalogProductRow = {
+  product_id: string;
+  title: string;
+  vendor: string | null;
+  product_type: string | null;
+  tags: string[];
+  price_min: Money | null;
+  price_max: Money | null;
+  inventory_total: number | null;
+  created_at: string;
+  units_sold: number;
+  revenue: Money;
+  return_rate_pct: number;
+};
+
+export type CatalogTagRow = {
+  tag: string;
+  product_count: number;
+  units_sold: number;
+  revenue: Money;
+};
+
+export type CatalogResponse =
+  | {
+      view: "never_sold" | "all";
+      range: DateRange;
+      rows: CatalogProductRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+      total_count: number;
+      plan_capped_to: number | null;
+    }
+  | {
+      view: "by_tag";
+      range: DateRange;
+      rows: CatalogTagRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+      total_count: number;
+      plan_capped_to: number | null;
+    };
+
+// ---- F53: Outstanding Customer Payments ----
+
+export type OutstandingOrderRow = {
+  order_id: string;
+  gid: string;
+  name: string;
+  created_at: string;
+  customer_id: string | null;
+  financial_status: string | null;
+  total_outstanding: Money;
+};
+
+export type OutstandingPaymentsResponse = {
+  summary: {
+    total_outstanding: Money;
+    order_count: number;
+  };
+  orders: OutstandingOrderRow[];
+  truncated: boolean;
+};
+
+// ---- F55: Transaction Status Reports ----
+
+export type TransactionView = "all" | "failed" | "by_gateway";
+
+export type TransactionRow = {
+  transaction_id: string;
+  order_id: string;
+  order_name: string;
+  gateway: string | null;
+  amount: Money;
+  status: string;
+  error_code: string | null;
+  processed_at: string;
+};
+
+export type TransactionGatewayRow = {
+  gateway: string;
+  transaction_count: number;
+  failed_count: number;
+  total_value: Money;
+  success_rate_pct: number; // 0..1
+  avg_value: Money;
+};
+
+export type TransactionResponse =
+  | {
+      view: "all" | "failed";
+      range: DateRange;
+      rows: TransactionRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+      pro_only: boolean;
+    }
+  | {
+      view: "by_gateway";
+      range: DateRange;
+      rows: TransactionGatewayRow[];
+      truncated: boolean;
+      history_clamped_to: HistoryClamp | null;
+    };

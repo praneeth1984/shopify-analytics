@@ -15,11 +15,15 @@ import { resolveRange } from "../metrics/date-range.js";
 import { clampRangeForPlan } from "../metrics/history-clamp.js";
 import { getPlanCached } from "../plan/get-plan.js";
 import { computeGeography } from "../metrics/geography.js";
+import {
+  computeBillingLocation,
+  computeCurrency,
+} from "../metrics/billing-location.js";
 import { BadRequest } from "../lib/errors.js";
 import type { DateRangePreset, GeographyResponse } from "@fbc/shared";
 import type { GraphQLClient } from "../shopify/graphql-client.js";
-import { ORDERS_GEOGRAPHY_QUERY } from "../metrics/queries.js";
-import type { GeoOrderNode } from "../metrics/queries.js";
+import { ORDERS_GEOGRAPHY_QUERY, ORDERS_BILLING_QUERY } from "../metrics/queries.js";
+import type { GeoOrderNode, BillingOrderNode } from "../metrics/queries.js";
 import { PAGE_SIZE, MAX_PAGES } from "../metrics/orders-fetch.js";
 
 const VALID_PRESETS: DateRangePreset[] = [
@@ -94,6 +98,62 @@ export function metricsGeographyRoutes() {
       history_clamped_to: historyClampedTo,
       cluster_precision: data.cluster_precision,
     };
+    return c.json(body);
+  });
+
+  type BillingResp = {
+    orders: {
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      nodes: BillingOrderNode[];
+    };
+  };
+
+  async function fetchBillingOrders(
+    graphql: GraphQLClient,
+    range: { start: string; end: string },
+  ): Promise<{ orders: BillingOrderNode[]; truncated: boolean }> {
+    const q = `processed_at:>='${range.start}' processed_at:<'${range.end}'`;
+    const out: BillingOrderNode[] = [];
+    let after: string | null = null;
+    let pages = 0;
+    while (pages < MAX_PAGES) {
+      const { data } = (await graphql<BillingResp>(ORDERS_BILLING_QUERY, {
+        query: q,
+        first: PAGE_SIZE,
+        after,
+      })) as { data: BillingResp };
+      out.push(...data.orders.nodes);
+      pages += 1;
+      if (!data.orders.pageInfo.hasNextPage) break;
+      after = data.orders.pageInfo.endCursor;
+      if (!after) break;
+    }
+    return { orders: out, truncated: pages === MAX_PAGES };
+  }
+
+  app.get("/billing", async (c) => {
+    const preset = (c.req.query("preset") ?? "last_30_days") as DateRangePreset;
+    if (!VALID_PRESETS.includes(preset)) throw BadRequest("invalid preset");
+
+    const requested = resolveRange(preset, c.req.query("start"), c.req.query("end"));
+    const plan = await getPlanCached(c);
+    const { range, historyClampedTo } = clampRangeForPlan(requested, plan);
+    const graphql = c.get("graphql");
+    const { orders, truncated } = await fetchBillingOrders(graphql, range);
+    const body = computeBillingLocation(orders, plan, range, truncated, historyClampedTo);
+    return c.json(body);
+  });
+
+  app.get("/currency", async (c) => {
+    const preset = (c.req.query("preset") ?? "last_30_days") as DateRangePreset;
+    if (!VALID_PRESETS.includes(preset)) throw BadRequest("invalid preset");
+
+    const requested = resolveRange(preset, c.req.query("start"), c.req.query("end"));
+    const plan = await getPlanCached(c);
+    const { range, historyClampedTo } = clampRangeForPlan(requested, plan);
+    const graphql = c.get("graphql");
+    const { orders, truncated } = await fetchBillingOrders(graphql, range);
+    const body = computeCurrency(orders, range, truncated, historyClampedTo);
     return c.json(body);
   });
 
