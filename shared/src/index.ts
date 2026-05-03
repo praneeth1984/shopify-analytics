@@ -677,3 +677,29 @@ export type GeographyResponse = {
   history_clamped_to: HistoryClamp | null;
   cluster_precision: GeographyClusterPrecision;
 };
+
+// ---- Feedback & Feature Requests (F42) ----
+
+export type FeedbackType = 'bug_report' | 'feature_request';
+export type FeedbackStatus = 'open' | 'reviewing' | 'planned' | 'shipped' | 'wont_fix';
+export type BugSeverity = 'minor' | 'blocks' | 'data_wrong';
+export type FeatureFrequency = 'daily' | 'weekly' | 'monthly' | 'occasionally';
+
+export interface FeedbackItem {
+  id: string;
+  type: FeedbackType;
+  title: string;
+  status: Exclude<FeedbackStatus, 'reviewing' | 'wont_fix'>;
+  upvotes: number;
+  hasUpvoted: boolean;
+  submittedAt: string;
+}
+
+export interface SubmitFeedbackRequest {
+  type: FeedbackType;
+  title: string;
+  description: string;
+  page?: string;
+  severity?: BugSeverity;
+  frequency?: FeatureFrequency;
+}
