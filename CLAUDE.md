@@ -290,12 +290,26 @@ What ships in the repo right now:
   passing (`format`). Playwright specs are stubbed but `test.skip`'d — `@playwright/test`
   is not yet a dep.
 
-### Operational follow-ups before production deploy
+### Deploying to production
 
-- **`wrangler.toml` KV namespace IDs are placeholders.** Run
-  `wrangler kv namespace create BULK_OPS_KV` (and the `--preview` variant) and paste the
-  resulting IDs in. The namespace is shared between bulk-op cursors (`bulk:*` keys) and
-  plan cache (`plan:*` keys).
+Run `/deploy` inside Claude Code — it executes the full sequence automatically. Manual steps:
+
+1. `pnpm test` — abort on any failure
+2. `cd backend && ./node_modules/.bin/wrangler deploy` — deploy the Worker
+3. `VITE_SHOPIFY_API_KEY=da5013ca68c07cace1f4bb8570b20af0 pnpm --filter @fbc/app build` — Vite production build
+4. `cd backend && ./node_modules/.bin/wrangler pages deploy ../app/dist --project-name firstbridge-analytics --branch main` — deploy to Pages
+5. `shopify app deploy --allow-updates` — sync `shopify.app.toml` to the Partner dashboard (scopes, webhooks, redirect URLs); idempotent, required when `shopify.app.toml` changes
+
+**Targets:**
+- Worker: `https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev`
+- Pages: `https://firstbridge-analytics.pages.dev`
+
+**Secrets** (`SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_URL`) are already set in
+the Worker via `wrangler secret put`. KV namespace IDs are real values in `wrangler.toml`.
+
+### Operational follow-ups (already done, kept for reference)
+
+- ~~`wrangler.toml` KV namespace IDs are placeholders~~ — real IDs are in `wrangler.toml`.
 - **Webhook subscriptions** (`app_subscriptions/update`, `app/uninstalled`, the three
   GDPR ones) are registered post-OAuth-callback. Verify they appear in the Partner
   dashboard after a clean install on a dev store.

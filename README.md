@@ -214,26 +214,70 @@ pnpm --filter @fbc/backend build        # wrangler dry-run (tsc + bundle check)
 
 ## Deploying
 
-### Backend (Cloudflare Worker)
+The app has two independently deployed services:
+
+| Service | Platform | URL |
+|---|---|---|
+| Backend | Cloudflare Workers | `https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev` |
+| Frontend | Cloudflare Pages | `https://firstbridge-analytics.pages.dev` |
+
+> **Shortcut:** run `/deploy` inside Claude Code to execute all steps automatically.
+
+### 1. Run tests (abort on failure)
+
+```bash
+pnpm test
+```
+
+### 2. Deploy the backend Worker
 
 ```bash
 cd backend
-wrangler deploy
+./node_modules/.bin/wrangler deploy
 ```
 
-### Frontend (embedded app)
+### 3. Build the frontend
 
-The embedded app is a static Vite build served from the Worker in production. Build it first:
+The Shopify API key (`client_id` in `shopify.app.toml`) is a public identifier — it must be
+embedded at build time. `VITE_BACKEND_URL` is already set in `app/.env.production`.
 
 ```bash
-pnpm --filter @fbc/app build
+VITE_SHOPIFY_API_KEY=da5013ca68c07cace1f4bb8570b20af0 pnpm --filter @fbc/app build
 ```
 
-Then deploy the Worker (which serves the built assets):
+### 4. Deploy the frontend to Cloudflare Pages
 
 ```bash
-pnpm --filter @fbc/backend deploy
+cd backend
+./node_modules/.bin/wrangler pages deploy ../app/dist \
+  --project-name firstbridge-analytics \
+  --branch main
 ```
+
+`--branch main` targets the production deployment (canonical URL). Omitting it creates a
+preview-only deployment at a temporary subdomain.
+
+### 5. Sync Shopify app config
+
+Pushes `shopify.app.toml` (scopes, redirect URLs, webhook subscriptions, app URL) to the
+Partner dashboard. Required whenever `shopify.app.toml` changes; safe to run on every
+deploy (idempotent).
+
+```bash
+shopify app deploy --allow-updates
+```
+
+`--allow-updates` is non-interactive and will not remove anything. Add `--allow-deletes`
+only if you intentionally removed scopes or webhooks.
+
+### 6. Smoke check
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" https://firstbridge-analytics-api.firstbridgeconsulting.workers.dev/health
+curl -s -o /dev/null -w "%{http_code}" https://firstbridge-analytics.pages.dev
+```
+
+Both should return `200`.
 
 ---
 
