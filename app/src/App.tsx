@@ -108,7 +108,6 @@ export function App() {
       )}
       <Page
         title="FirstBridge Analytics"
-        subtitle="A clear view of your store, free."
         fullWidth
         secondaryActions={IS_DEV ? [
           {

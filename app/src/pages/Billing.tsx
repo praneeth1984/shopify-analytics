@@ -1,14 +1,15 @@
 /**
- * Plan & Billing page — current plan overview and upcoming tier roadmap.
+ * Plan & Billing page — current plan overview and upgrade flow.
  *
- * Pro and AI plans are shown as "Coming Soon" — billing is not yet active.
- * The page is informational only until managed pricing is enabled post-submission.
+ * Two plans only: Free and Pro. Monthly billing only.
  */
 
 import {
-  Badge, BlockStack, Box, Card, InlineStack,
+  Badge, BlockStack, Button, Card, Grid, InlineStack,
   Layout, List, Page, Text,
 } from "@shopify/polaris";
+import { PRO_MONTHLY_PRICE } from "@fbc/shared";
+import { useBilling } from "../hooks/useBilling.js";
 
 type PlanCard = {
   name: string;
@@ -22,7 +23,7 @@ type PlanCard = {
 const PLANS: PlanCard[] = [
   {
     name: "Free",
-    price: "$0",
+    price: "$0 / month",
     description: "Everything most stores need to understand performance.",
     features: [
       "Revenue, orders, AOV, unique customers",
@@ -36,7 +37,7 @@ const PLANS: PlanCard[] = [
   },
   {
     name: "Pro",
-    price: "$4.99 / month",
+    price: `${PRO_MONTHLY_PRICE} / month`,
     description: "Everything in Free, plus deeper history and detail.",
     features: [
       "Unlimited history",
@@ -47,22 +48,11 @@ const PLANS: PlanCard[] = [
     ],
     comingSoon: true,
   },
-  {
-    name: "AI",
-    price: "$59.99 / month",
-    description: "Everything in Pro, plus AI-powered insights and recommendations.",
-    features: [
-      "Weekly AI performance brief",
-      "Anomaly detection and alerts",
-      "Peer benchmarks vs. similar stores",
-      "Natural-language Q&A on your data",
-      "Priority support",
-    ],
-    comingSoon: true,
-  },
 ];
 
 export function Billing() {
+  const { manage } = useBilling();
+
   return (
     <Page
       title="Plan & Billing"
@@ -81,9 +71,12 @@ export function Billing() {
               </BlockStack>
             </Card>
 
-            <InlineStack gap="400" align="start" wrap>
+            <Grid>
               {PLANS.map((plan) => (
-                <Box key={plan.name} minWidth="280px" maxWidth="360px">
+                <Grid.Cell
+                  key={plan.name}
+                  columnSpan={{ xs: 6, sm: 6, md: 3, lg: 6, xl: 6 }}
+                >
                   <Card>
                     <BlockStack gap="300">
                       <InlineStack align="space-between" blockAlign="center">
@@ -108,11 +101,20 @@ export function Billing() {
                           <List.Item key={f}>{f}</List.Item>
                         ))}
                       </List>
+
+                      {plan.name === "Pro" && (
+                        <Button
+                          variant="primary"
+                          onClick={() => { void manage(); }}
+                        >
+                          {`Upgrade to Pro — ${PRO_MONTHLY_PRICE}/mo`}
+                        </Button>
+                      )}
                     </BlockStack>
                   </Card>
-                </Box>
+                </Grid.Cell>
               ))}
-            </InlineStack>
+            </Grid>
           </BlockStack>
         </Layout.Section>
       </Layout>

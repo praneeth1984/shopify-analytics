@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Page, Tabs, Card, BlockStack, Text, InlineStack, Badge, Button, TextField } from "@shopify/polaris";
+import { Page, Tabs, Card, BlockStack, Banner, Text, InlineStack, Button, TextField } from "@shopify/polaris";
 import type { DateRangePreset } from "@fbc/shared";
 import { navigate } from "../../App.js";
 import { RangePicker } from "../../components/RangePicker.js";
@@ -159,7 +159,7 @@ const REPORTS_INDEX: ReportSection[] = [
   },
 ];
 
-function ReportsIndexPage() {
+function ReportsIndexContent() {
   const [query, setQuery] = useState("");
 
   const filteredSections = useMemo(() => {
@@ -176,76 +176,72 @@ function ReportsIndexPage() {
   const totalMatches = filteredSections.reduce((acc, s) => acc + s.reports.length, 0);
 
   return (
-    <Page title="Reports" subtitle="Pre-built reports for the questions merchants ask most">
-      <BlockStack gap="500">
-        <TextField
-          label="Search reports"
-          labelHidden
-          placeholder="Search reports…"
-          value={query}
-          onChange={setQuery}
-          clearButton
-          onClearButtonClick={() => setQuery("")}
-          autoComplete="off"
-        />
+    <BlockStack gap="500">
+      <TextField
+        label="Search reports"
+        labelHidden
+        placeholder="Search reports…"
+        value={query}
+        onChange={setQuery}
+        clearButton
+        onClearButtonClick={() => setQuery("")}
+        autoComplete="off"
+      />
 
-        {totalMatches === 0 && (
-          <Card>
-            <Text as="p" tone="subdued">No reports match "{query}".</Text>
-          </Card>
-        )}
+      {totalMatches === 0 && (
+        <Card>
+          <Text as="p" tone="subdued">No reports match "{query}".</Text>
+        </Card>
+      )}
 
-        {filteredSections.map((section) => (
-          <BlockStack key={section.section} gap="300">
-            <Text as="h2" variant="headingMd">{section.section}</Text>
-            {section.reports.map((r) => (
-              <Card key={r.href}>
-                <InlineStack align="space-between" blockAlign="center" wrap>
-                  <BlockStack gap="100">
-                    <Text as="h3" variant="headingSm">{r.title}</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">{r.description}</Text>
-                  </BlockStack>
-                  <Button onClick={() => navigate(r.href)}>Open</Button>
-                </InlineStack>
-              </Card>
-            ))}
-          </BlockStack>
-        ))}
-      </BlockStack>
-    </Page>
+      {filteredSections.map((section) => (
+        <BlockStack key={section.section} gap="300">
+          <Text as="h2" variant="headingMd">{section.section}</Text>
+          {section.reports.map((r) => (
+            <Card key={r.href}>
+              <InlineStack align="space-between" blockAlign="center" wrap>
+                <BlockStack gap="100">
+                  <Text as="h3" variant="headingSm">{r.title}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{r.description}</Text>
+                </BlockStack>
+                <Button onClick={() => navigate(r.href)}>Open</Button>
+              </InlineStack>
+            </Card>
+          ))}
+        </BlockStack>
+      ))}
+    </BlockStack>
   );
 }
 
-function ExportInfoPage() {
+function ExportInfoContent() {
   const [preset, setPreset] = useState<DateRangePreset>("last_30_days");
 
   return (
-    <Page title="CSV Export">
-      <BlockStack gap="400">
-        <Card>
-          <InlineStack align="space-between" blockAlign="center">
-            <Text as="p" tone="subdued">Select a date range, then download any panel as CSV.</Text>
-            <RangePicker value={preset} onChange={setPreset} />
+    <BlockStack gap="400">
+      <Card>
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="p" tone="subdued">Select a date range, then download any panel as CSV.</Text>
+          <RangePicker value={preset} onChange={setPreset} />
+        </InlineStack>
+      </Card>
+
+      {EXPORT_PANELS.map(({ panel, label, description }) => (
+        <Card key={panel}>
+          <InlineStack align="space-between" blockAlign="center" wrap>
+            <BlockStack gap="100">
+              <Text as="h3" variant="headingSm">{label}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">{description}</Text>
+            </BlockStack>
+            <ExportButton panel={panel} preset={preset} label={`Download ${label} CSV`} />
           </InlineStack>
         </Card>
+      ))}
 
-        {EXPORT_PANELS.map(({ panel, label, description }) => (
-          <Card key={panel}>
-            <InlineStack align="space-between" blockAlign="center" wrap>
-              <BlockStack gap="100">
-                <Text as="h3" variant="headingSm">{label}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">{description}</Text>
-              </BlockStack>
-              <ExportButton panel={panel} preset={preset} label={`Download ${label} CSV`} />
-            </InlineStack>
-          </Card>
-        ))}
-
-        <Text as="p" variant="bodySm" tone="subdued">
-          <Badge>Free</Badge>{" "}Exports are capped at 90 days of history. Upgrade to Pro for unlimited history.
-        </Text>
-      </BlockStack>
-    </Page>
+      <Banner tone="info" title="Free plan: 90 days of history">
+        <Text as="p">Exports are capped at 90 days of history. Upgrade to Pro for unlimited history.</Text>
+      </Banner>
+    </BlockStack>
   );
 }
 
@@ -286,8 +282,8 @@ function ReportsTabsPage() {
   return (
     <Page title="Reports" fullWidth>
       <Tabs tabs={TABS} selected={selected} onSelect={handleTabChange}>
-        {selected === 0 && <ReportsIndexPage />}
-        {selected === 1 && <ExportInfoPage />}
+        {selected === 0 && <ReportsIndexContent />}
+        {selected === 1 && <ExportInfoContent />}
       </Tabs>
     </Page>
   );

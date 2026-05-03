@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Card, BlockStack, Text, TextField, Button, InlineStack, Box, Banner,
-  Divider, EmptyState, Badge,
+  Divider, EmptyState, Badge, Modal,
 } from "@shopify/polaris";
 import { useCogs } from "../../hooks/useCogs.js";
 import type { CogsSearchVariant } from "../../hooks/useCogs.js";
@@ -87,6 +87,7 @@ export function CogsSettingsTab() {
   };
 
   const [syncBanner, setSyncBanner] = useState<{ synced: number; capped: boolean } | null>(null);
+  const [confirmSyncOpen, setConfirmSyncOpen] = useState(false);
 
   const handleSync = async (overwrite = false) => {
     setSyncBanner(null);
@@ -173,7 +174,7 @@ export function CogsSettingsTab() {
             </Button>
             {cogs.entries.length > 0 && (
               <Button
-                onClick={() => void handleSync(true)}
+                onClick={() => setConfirmSyncOpen(true)}
                 loading={cogs.syncing}
                 disabled={cogs.loading}
                 tone="critical"
@@ -240,7 +241,7 @@ export function CogsSettingsTab() {
         <Text as="h3" variant="headingMd">Saved costs</Text>
         {cogs.entries.length === 0 ? (
           <Card>
-            <EmptyState heading="No saved costs yet" image="">
+            <EmptyState heading="No saved costs yet" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
               <p>
                 Sync costs from Shopify's "Cost per item" field, or add them manually using the search above.
               </p>
@@ -273,6 +274,30 @@ export function CogsSettingsTab() {
           Go to Expenses
         </Button>
       </Text>
+
+      <Modal
+        open={confirmSyncOpen}
+        onClose={() => setConfirmSyncOpen(false)}
+        title="Replace your costs with Shopify's costs?"
+        primaryAction={{
+          content: "Yes, overwrite all",
+          destructive: true,
+          onAction: () => {
+            void handleSync(true);
+            setConfirmSyncOpen(false);
+          },
+        }}
+        secondaryActions={[
+          { content: "Cancel", onAction: () => setConfirmSyncOpen(false) },
+        ]}
+      >
+        <Modal.Section>
+          <Text as="p">
+            Any costs you've edited manually will be replaced with values from Shopify's
+            "Cost per item" field. This cannot be undone.
+          </Text>
+        </Modal.Section>
+      </Modal>
     </BlockStack>
   );
 }

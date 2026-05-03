@@ -26,6 +26,7 @@ import {
   Box,
   ButtonGroup,
 } from "@shopify/polaris";
+import { CaretUpIcon } from "@shopify/polaris-icons";
 import { useFeedback } from "../hooks/useFeedback.js";
 import { showToast } from "../lib/toast.js";
 import type {
@@ -211,7 +212,7 @@ export function Feedback() {
               />
 
               {submitError && (
-                <Banner tone="critical" onDismiss={() => setSubmitError(null)}>
+                <Banner tone="critical" title="Submission failed" onDismiss={() => setSubmitError(null)}>
                   {submitError}
                 </Banner>
               )}
@@ -342,7 +343,7 @@ export function Feedback() {
               </ButtonGroup>
 
               {error ? (
-                <Banner tone="critical">{error}</Banner>
+                <Banner tone="critical" title="Could not load feedback">{error}</Banner>
               ) : loading ? (
                 <BlockStack gap="300">
                   {[0, 1, 2].map((i) => (
@@ -363,7 +364,7 @@ export function Feedback() {
                         ? "Nothing on the planned list yet"
                         : "No feedback yet"
                   }
-                  image=""
+                  image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E"
                 >
                   <p>
                     {statusFilter === "open"
@@ -387,6 +388,7 @@ export function Feedback() {
                         </BlockStack>
                         <Box minWidth="80px">
                           <Button
+                            icon={CaretUpIcon}
                             pressed={item.hasUpvoted}
                             onClick={() => void toggleUpvote(item.id)}
                             accessibilityLabel={
@@ -395,7 +397,7 @@ export function Feedback() {
                                 : `Upvote, currently ${item.upvotes} upvotes`
                             }
                           >
-                            {`▲ ${item.upvotes}`}
+                            {String(item.upvotes)}
                           </Button>
                         </Box>
                       </InlineStack>

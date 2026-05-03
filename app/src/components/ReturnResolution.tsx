@@ -92,7 +92,7 @@ export function ReturnResolution({ preset }: Props) {
             <SkeletonBodyText lines={3} />
           </Box>
         ) : totalCount === 0 ? (
-          <EmptyState heading="No refunds in this period." image="" fullWidth>
+          <EmptyState heading="No refunds in this period." image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E" fullWidth>
             <p>
               Once you process refunds for returned items, we'll break them down by cash, store
               credit, and exchange here.

@@ -43,7 +43,7 @@ export function BundlesPage() {
         {loading ? (
           <SkeletonBodyText lines={6} />
         ) : data && data.bundles.length === 0 ? (
-          <EmptyState heading="No strong bundles detected" image="">
+          <EmptyState heading="No strong bundles detected" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
             <Text as="p" tone="subdued">
               Bundle pairs require ≥3 co-purchases in at least 5% of either product&apos;s orders.
               Try a wider date range.

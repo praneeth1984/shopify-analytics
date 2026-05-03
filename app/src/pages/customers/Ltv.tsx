@@ -47,7 +47,7 @@ export function LtvPage() {
         {loading ? (
           <SkeletonBodyText lines={6} />
         ) : data && data.rows.length === 0 ? (
-          <EmptyState heading="No cohort LTV data" image="">
+          <EmptyState heading="No cohort LTV data" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
             <Text as="p" tone="subdued">
               LTV analysis requires new customers (first-ever order) in the selected range.
               Try a wider date range.

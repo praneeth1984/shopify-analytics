@@ -282,6 +282,10 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   insights: { cogsCap: Number.POSITIVE_INFINITY, historyDays: Number.POSITIVE_INFINITY },
 };
 
+export const FREE_COGS_CAP = 20;
+export const FREE_HISTORY_DAYS = 90;
+export const PRO_MONTHLY_PRICE = "$4.99";
+
 export type ShopConfig = {
   plan: Plan;
   preferences: {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BlockStack, Card, InlineStack, Page, Text } from "@shopify/polaris";
+import { BlockStack, Grid, Page, Text } from "@shopify/polaris";
 import type { DateRangePreset } from "@fbc/shared";
 import { RangePicker } from "../../components/RangePicker.js";
 import { TopReturnedProducts } from "../../components/TopReturnedProducts.js";
@@ -12,22 +12,18 @@ export function ProductReturnsPage() {
   return (
     <Page title="Returns" subtitle="Which products get returned, why, and how refunds resolve.">
       <BlockStack gap="400">
-        <Card>
-          <InlineStack align="end">
-            <RangePicker value={preset} onChange={setPreset} />
-          </InlineStack>
-        </Card>
+        <RangePicker value={preset} onChange={setPreset} />
 
         <TopReturnedProducts preset={preset} />
 
-        <InlineStack gap="400" align="start" wrap>
-          <div style={{ flex: "1 1 300px" }}>
+        <Grid>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
             <ReturnReasonsBreakdown preset={preset} />
-          </div>
-          <div style={{ flex: "1 1 300px" }}>
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
             <ReturnResolution preset={preset} />
-          </div>
-        </InlineStack>
+          </Grid.Cell>
+        </Grid>
 
         <Text as="p" variant="bodySm" tone="subdued">
           Return rate and refund data reflects orders in the selected date range.

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Page, Card, IndexTable, Banner, Text, InlineStack, BlockStack,
+  Page, Card, IndexTable, Banner, Box, Button, Grid, Text, InlineStack, BlockStack,
   SkeletonBodyText, EmptyState,
 } from "@shopify/polaris";
 import { useTopCustomers } from "../../hooks/useTopCustomers.js";
@@ -42,39 +42,48 @@ export function CustomersOverviewPage() {
             <Text as="h2" variant="headingMd">Repeat Purchase Rate</Text>
 
             {repeatRate.error && (
-              <Banner tone="critical" title="Failed to load repeat rate">
-                <Text as="p">{repeatRate.error}</Text>
+              <Banner tone="critical" title="We couldn't load this report">
+                <Text as="p">
+                  Try refreshing in a moment. If it keeps failing, use the Feedback page to let us know.
+                </Text>
+                <Box paddingBlockStart="200">
+                  <Button onClick={() => window.location.reload()}>Retry</Button>
+                </Box>
               </Banner>
             )}
 
             {repeatRate.loading ? (
               <SkeletonBodyText lines={3} />
             ) : repeatRate.data?.insufficient_data ? (
-              <Banner tone="info">
+              <Banner tone="info" title="Not enough first-time customers">
                 <Text as="p">
                   Need at least 20 first-time customers in this period to compute a reliable rate.
                   Try a wider date range.
                 </Text>
               </Banner>
             ) : (
-              <InlineStack gap="400" wrap>
-                <MetricCard
-                  label="Repeat Customer Rate"
-                  value={
-                    repeatRate.data?.repeat_rate !== null
-                      ? formatMargin(repeatRate.data?.repeat_rate ?? 0)
-                      : "—"
-                  }
-                  delta={repeatRate.data?.repeat_rate_delta_pct ?? null}
-                  caption="Customers with 2+ lifetime orders"
-                />
-                <MetricCard
-                  label="Revenue from Repeat Customers"
-                  value={formatMargin(repeatRate.data?.revenue_from_repeat_pct ?? 0)}
-                  delta={null}
-                  caption="% of revenue from repeat customers"
-                />
-              </InlineStack>
+              <Grid>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+                  <MetricCard
+                    label="Repeat Customer Rate"
+                    value={
+                      repeatRate.data?.repeat_rate !== null
+                        ? formatMargin(repeatRate.data?.repeat_rate ?? 0)
+                        : "—"
+                    }
+                    delta={repeatRate.data?.repeat_rate_delta_pct ?? null}
+                    caption="Customers with 2+ lifetime orders"
+                  />
+                </Grid.Cell>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+                  <MetricCard
+                    label="Revenue from Repeat Customers"
+                    value={formatMargin(repeatRate.data?.revenue_from_repeat_pct ?? 0)}
+                    delta={null}
+                    caption="% of revenue from repeat customers"
+                  />
+                </Grid.Cell>
+              </Grid>
             )}
           </BlockStack>
         </Card>
@@ -88,8 +97,13 @@ export function CustomersOverviewPage() {
             </InlineStack>
 
             {customers.error && (
-              <Banner tone="critical" title="Failed to load customer data">
-                <Text as="p">{customers.error}</Text>
+              <Banner tone="critical" title="We couldn't load this report">
+                <Text as="p">
+                  Try refreshing in a moment. If it keeps failing, use the Feedback page to let us know.
+                </Text>
+                <Box paddingBlockStart="200">
+                  <Button onClick={() => window.location.reload()}>Retry</Button>
+                </Box>
               </Banner>
             )}
 
@@ -106,13 +120,13 @@ export function CustomersOverviewPage() {
             {customers.loading ? (
               <SkeletonBodyText lines={6} />
             ) : customers.data?.insufficient_data ? (
-              <EmptyState heading="Not enough customers in this period" image="">
+              <EmptyState heading="Not enough customers in this period" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
                 <Text as="p" tone="subdued">
                   Need at least 5 customers to rank. Try a wider date range.
                 </Text>
               </EmptyState>
             ) : customers.data && customers.data.customers.length === 0 ? (
-              <EmptyState heading="No customers in this period" image="">
+              <EmptyState heading="No customers in this period" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
                 <Text as="p" tone="subdued">Try a wider date range.</Text>
               </EmptyState>
             ) : (

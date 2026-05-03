@@ -13,6 +13,7 @@ import {
   TextField,
 } from "@shopify/polaris";
 import type { ComparisonMode, DateRangePreset, OverviewMetrics } from "@fbc/shared";
+import { PRO_MONTHLY_PRICE } from "@fbc/shared";
 
 import { navigate } from "../App.js";
 
@@ -20,25 +21,16 @@ import { LiveMetricsCard } from "../components/LiveMetricsCard.js";
 import { MetricCard } from "../components/MetricCard.js";
 import { RangePicker } from "../components/RangePicker.js";
 import { ComparisonPicker } from "../components/ComparisonPicker.js";
-import { ProfitCards } from "../components/ProfitCards.js";
-import { TopProfitableProducts } from "../components/TopProfitableProducts.js";
-import { CogsCoverageBanner } from "../components/CogsCoverageBanner.js";
 import { PendingReturnsHint } from "../components/PendingReturnsHint.js";
-import { TopReturnedProducts } from "../components/TopReturnedProducts.js";
-import { ReturnReasonsBreakdown } from "../components/ReturnReasonsBreakdown.js";
-import { ReturnResolution } from "../components/ReturnResolution.js";
 import { ChartSkeleton } from "../components/charts/ChartSkeleton.js";
 import { useProfit } from "../hooks/useProfit.js";
-import { useReturnReasons } from "../hooks/useReturnReasons.js";
+import { usePreferences } from "../hooks/usePreferences.js";
 import { SavedViewsButton } from "../components/SavedViewsButton.js";
 import { apiFetch, ApiError } from "../lib/api.js";
 import { formatMoney, formatNumber } from "../lib/format.js";
 
 const RevenueOrdersChart = lazy(() => import("../components/charts/RevenueOrdersChart.js"));
 const SalesByDowChart = lazy(() => import("../components/charts/SalesByDowChart.js"));
-const MarginTrendChart = lazy(() => import("../components/charts/MarginTrendChart.js"));
-const ReturnRateTrendChart = lazy(() => import("../components/charts/ReturnRateTrendChart.js"));
-const ReturnReasonsDonut = lazy(() => import("../components/charts/ReturnReasonsDonut.js"));
 
 type OverviewResponse = OverviewMetrics & { truncated: boolean };
 
@@ -68,7 +60,7 @@ function buildOverviewUrl(
   return `/api/metrics/overview?${params.toString()}`;
 }
 
-export function Dashboard({ onNavigateToSettings }: Props) {
+export function Dashboard({ onNavigateToSettings: _onNavigateToSettings }: Props) {
   const [preset, setPreset] = useState<DateRangePreset>("last_30_days");
   const [comparison, setComparison] = useState<ComparisonMode>("previous_period");
   const [customStart, setCustomStart] = useState<string>("");
@@ -78,6 +70,8 @@ export function Dashboard({ onNavigateToSettings }: Props) {
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { preferences, setPreference } = usePreferences();
 
   const isCustomReady = preset !== "custom" || (customStart !== "" && customEnd !== "");
 
@@ -92,7 +86,6 @@ export function Dashboard({ onNavigateToSettings }: Props) {
   }
 
   const profit = useProfit(preset, comparison, customStart, customEnd);
-  const returnReasons = useReturnReasons(preset);
   const currencyCode = data?.revenue.current.currency_code ?? "USD";
   const caption = comparisonCaption(comparison);
 
@@ -118,11 +111,13 @@ export function Dashboard({ onNavigateToSettings }: Props) {
     void load(preset, comparison, customStart, customEnd, activeTags);
   }, [load, preset, comparison, customStart, customEnd, activeTags]);
 
+  const showHistoryClampBanner =
+    Boolean(profit.data?.history_clamped_to) && !preferences?.historyClampDismissed;
+
   return (
     <Layout>
       <Layout.Section>
         <BlockStack gap="400">
-          <LiveMetricsCard />
           <InlineStack align="space-between" blockAlign="center" gap="200" wrap>
             <InlineStack gap="300" blockAlign="center">
               <Text as="h2" variant="headingLg">
@@ -171,7 +166,7 @@ export function Dashboard({ onNavigateToSettings }: Props) {
               />
             </Box>
             {activeTags.length > 0 && (
-              <Button onClick={clearTags} variant="plain" tone="critical">
+              <Button onClick={clearTags} variant="plain">
                 {`Clear filter (${activeTags.join(", ")})`}
               </Button>
             )}
@@ -189,16 +184,19 @@ export function Dashboard({ onNavigateToSettings }: Props) {
             </Banner>
           ) : null}
 
-          {profit.data?.history_clamped_to ? (
-            <Banner tone="info" title="Showing the last 90 days on Free">
+          {showHistoryClampBanner ? (
+            <Banner
+              tone="info"
+              title="Profit shown for the last 90 days"
+              onDismiss={() => { void setPreference("historyClampDismissed", true); }}
+            >
               <BlockStack gap="200">
                 <Text as="p">
-                  Profit history is capped at 90 days on the Free plan. Upgrade to Pro for
-                  unlimited history.
+                  Pro removes the cap so you can compare against last year and any custom range.
                 </Text>
                 <InlineStack>
-                  <Button variant="plain" onClick={() => navigate("/billing")}>
-                    Upgrade to Pro
+                  <Button variant="primary" onClick={() => navigate("/billing")}>
+                    {`Upgrade to Pro — ${PRO_MONTHLY_PRICE}/mo`}
                   </Button>
                 </InlineStack>
               </BlockStack>
@@ -206,19 +204,19 @@ export function Dashboard({ onNavigateToSettings }: Props) {
           ) : null}
 
           {data?.truncated ? (
-            <Banner tone="info" title="Showing partial results">
-              <p>
-                This range exceeds our quick-aggregation window. We're showing the most recent
-                portion. We'll switch to a full background aggregation in an upcoming release.
-              </p>
+            <Banner tone="info" title="Showing your most recent 2,500 orders">
+              <BlockStack gap="200">
+                <Text as="p">
+                  This date range has more orders than we can total in real time. Narrow the date
+                  filter or upgrade to Pro for unlimited aggregation.
+                </Text>
+                <InlineStack>
+                  <Button variant="primary" onClick={() => navigate("/billing")}>
+                    {`Upgrade to Pro — ${PRO_MONTHLY_PRICE}/mo`}
+                  </Button>
+                </InlineStack>
+              </BlockStack>
             </Banner>
-          ) : null}
-
-          {profit.data ? (
-            <CogsCoverageBanner
-              coverage={profit.data.cogs_coverage}
-              onSetupCogs={onNavigateToSettings}
-            />
           ) : null}
 
           <Grid>
@@ -277,6 +275,8 @@ export function Dashboard({ onNavigateToSettings }: Props) {
               )}
             </Grid.Cell>
           </Grid>
+
+          <LiveMetricsCard />
 
           {data && data.new_customers + data.returning_customers > 0 ? (
             <Grid>
@@ -339,53 +339,9 @@ export function Dashboard({ onNavigateToSettings }: Props) {
             <Suspense fallback={<ChartSkeleton />}>
               <SalesByDowChart data={data.revenue_by_dow} currencyCode={currencyCode} />
             </Suspense>
-          ) : null}
-
-          <BlockStack gap="200">
-            <Text as="h2" variant="headingLg">
-              Profit
-            </Text>
-            <ProfitCards
-              data={profit.data}
-              loading={profit.loading}
-              onSetupCogs={onNavigateToSettings}
-            />
-          </BlockStack>
-
-          {profit.data ? (
-            <Suspense fallback={<ChartSkeleton />}>
-              <MarginTrendChart data={profit.data} />
-            </Suspense>
-          ) : null}
-
-          <TopProfitableProducts
-            products={profit.data?.top_profitable_products ?? []}
-            loading={profit.loading}
-          />
-
-          <BlockStack gap="300">
-            <Text as="h2" variant="headingLg">
-              Returns
-            </Text>
-            {data ? (
-              <Suspense fallback={<ChartSkeleton />}>
-                <ReturnRateTrendChart series={data.return_rate_series} />
-              </Suspense>
-            ) : null}
-            <TopReturnedProducts preset={preset} />
-            <ReturnReasonsBreakdown
-              preset={preset}
-              data={returnReasons.data}
-              loading={returnReasons.loading}
-              error={returnReasons.error}
-            />
-            {returnReasons.data && returnReasons.data.reasons.length > 0 ? (
-              <Suspense fallback={<ChartSkeleton />}>
-                <ReturnReasonsDonut reasons={returnReasons.data.reasons} />
-              </Suspense>
-            ) : null}
-            <ReturnResolution preset={preset} />
-          </BlockStack>
+          ) : (
+            <ChartSkeleton />
+          )}
         </BlockStack>
       </Layout.Section>
     </Layout>

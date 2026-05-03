@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Banner, BlockStack, Card, Icon, IndexTable,
+  Banner, BlockStack, Box, Button, Card, Icon, IndexTable, InlineStack,
   Page, SkeletonBodyText, Text, TextField,
 } from "@shopify/polaris";
 import { SearchIcon } from "@shopify/polaris-icons";
+import { PRO_MONTHLY_PRICE } from "@fbc/shared";
+import { navigate } from "../../App.js";
 import { apiFetch, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
 import { TablePagination, useClientPagination } from "../../components/TablePagination.js";
@@ -137,13 +139,26 @@ export function AllCustomersPage() {
     <Page title="All Customers">
       <BlockStack gap="400">
         {data?.planCappedTo && (
-          <Banner tone="info">
-            <Text as="p" variant="bodySm">
-              Free plan: showing top {data.planCappedTo} customers. Upgrade to Pro for the full list.
-            </Text>
+          <Banner tone="info" title={`Free plan: showing top ${data.planCappedTo} customers`}>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm">
+                Upgrade to Pro for the full customer list.
+              </Text>
+              <Box>
+                <InlineStack>
+                  <Button variant="primary" onClick={() => navigate("/billing")}>
+                    {`Upgrade to Pro — ${PRO_MONTHLY_PRICE}/mo`}
+                  </Button>
+                </InlineStack>
+              </Box>
+            </BlockStack>
           </Banner>
         )}
-        {error && <Banner tone="critical"><Text as="p">{error}</Text></Banner>}
+        {error && (
+          <Banner tone="critical" title="Could not load customers">
+            <Text as="p">{error}</Text>
+          </Banner>
+        )}
 
         <TextField
           label="Search customers"
@@ -165,7 +180,7 @@ export function AllCustomersPage() {
               resourceName={{ singular: "customer", plural: "customers" }}
               itemCount={pg.page.length}
               selectable={false}
-              sortable={[true, false, true, true, true, true, true, true]}
+              sortable={[false, false, true, true, true, true, true, true]}
               sortDirection={sortDirection}
               sortColumnIndex={sortIndex}
               onSort={handleSort}

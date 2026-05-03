@@ -43,7 +43,7 @@ export function PriceAnalysisPage() {
           {loading ? (
             <SkeletonBodyText lines={6} />
           ) : !hasData ? (
-            <EmptyState heading="No orders in this period" image="">
+            <EmptyState heading="No orders in this period" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
               <Text as="p" tone="subdued">Try a wider date range.</Text>
             </EmptyState>
           ) : (

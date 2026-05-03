@@ -23,6 +23,7 @@ import {
   TextField,
 } from "@shopify/polaris";
 import type { DateRangePreset, RegionRow } from "@fbc/shared";
+import { PRO_MONTHLY_PRICE } from "@fbc/shared";
 import { useGeography } from "../hooks/useGeography.js";
 import { formatMoney, formatNumber } from "../lib/format.js";
 import { navigate } from "../App.js";
@@ -225,7 +226,7 @@ export function Geography() {
             </Box>
             {data?.truncated && (
               <InlineStack gap="200" blockAlign="center">
-                <Text as="span" variant="bodySm" tone="caution">
+                <Text as="span" variant="bodySm" tone="critical">
                   Partial results — capped at 2,500 orders.
                 </Text>
                 <Button variant="plain" onClick={() => navigate("/billing")}>
@@ -235,7 +236,7 @@ export function Geography() {
             )}
             {data?.history_clamped_to && (
               <InlineStack gap="200" blockAlign="center">
-                <Text as="span" variant="bodySm" tone="caution">
+                <Text as="span" variant="bodySm" tone="critical">
                   Showing 90-day window (Free plan).
                 </Text>
                 <Button variant="plain" onClick={() => navigate("/billing")}>
@@ -261,10 +262,10 @@ export function Geography() {
             </Text>
 
             {loading && (
-              <Box minHeight="420px" background="bg-surface-secondary">
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "420px" }}>
-                  <Spinner size="large" />
-                </div>
+              <Box minHeight="420px">
+                <BlockStack align="center" inlineAlign="center">
+                  <Spinner size="large" accessibilityLabel="Loading geography data" />
+                </BlockStack>
               </Box>
             )}
 
@@ -281,10 +282,10 @@ export function Geography() {
             {!loading && data && data.clusters.length > 0 && (
               <Suspense
                 fallback={
-                  <Box minHeight="420px" background="bg-surface-secondary">
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "420px" }}>
-                      <Spinner size="large" />
-                    </div>
+                  <Box minHeight="420px">
+                    <BlockStack align="center" inlineAlign="center">
+                      <Spinner size="large" accessibilityLabel="Loading geography data" />
+                    </BlockStack>
                   </Box>
                 }
               >
@@ -332,15 +333,14 @@ export function Geography() {
             </InlineStack>
 
             {!isPro && (
-              <Banner tone="info">
+              <Banner tone="info" title="Free plan: country and state breakdown only">
                 <BlockStack gap="200">
                   <Text as="p">
-                    <strong>Free plan:</strong> country and state breakdown only.
                     Upgrade to Pro for city-level rows, full heat map precision, and unlimited history.
                   </Text>
                   <InlineStack>
-                    <Button variant="plain" onClick={() => navigate("/billing")}>
-                      Upgrade to Pro
+                    <Button variant="primary" onClick={() => navigate("/billing")}>
+                      {`Upgrade to Pro — ${PRO_MONTHLY_PRICE}/mo`}
                     </Button>
                   </InlineStack>
                 </BlockStack>

@@ -80,7 +80,7 @@ function ReturnReasonsBreakdownView({
             <SkeletonBodyText lines={5} />
           </Box>
         ) : data.reasons.length === 0 ? (
-          <EmptyState heading="No return reasons recorded yet." image="" fullWidth>
+          <EmptyState heading="No return reasons recorded yet." image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E" fullWidth>
             <p>
               Reasons appear when customers submit returns through Shopify's self-serve portal.
             </p>

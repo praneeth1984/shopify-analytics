@@ -88,7 +88,7 @@ export function TopReturnedProducts({ preset }: Props) {
             <SkeletonBodyText lines={5} />
           </Box>
         ) : data.products.length === 0 ? (
-          <EmptyState heading="No returns recorded in this period." image="" fullWidth>
+          <EmptyState heading="No returns recorded in this period." image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E" fullWidth>
             <p>
               Once customers start returning items, the products with the highest return rate
               will show up here.

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   Banner, BlockStack, Box, Button, ButtonGroup, Card,
-  DataTable, InlineStack, Page, SkeletonBodyText, Text,
+  DataTable, Icon, InlineStack, Page, SkeletonBodyText, Text, Tooltip,
 } from "@shopify/polaris";
+import { InfoIcon } from "@shopify/polaris-icons";
 import type { DateRangePreset } from "@fbc/shared";
 import { apiFetch, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
@@ -52,21 +53,30 @@ export function TrafficSourcesPage() {
   }, [preset, channel]);
 
   return (
-    <Page title="Traffic Sources">
+    <Page
+      title="Traffic Sources"
+      titleMetadata={
+        <Tooltip content="Traffic sources come from the page that referred each order. Orders without tracking show as 'Direct'.">
+          <Box>
+            <Icon source={InfoIcon} tone="subdued" />
+          </Box>
+        </Tooltip>
+      }
+    >
       <BlockStack gap="400">
-        <Banner tone="info">
-          <Text as="p" variant="bodySm">{data?.limitationNote ?? "First-touch attribution from order landing page."}</Text>
-        </Banner>
-
         {data?.historyClampedTo && (
-          <Banner tone="warning">
-            <Text as="p" variant="bodySm">Free plan: data limited to last 90 days. Upgrade to Pro for full history.</Text>
+          <Banner tone="warning" title="Free plan: data limited to last 90 days">
+            <Text as="p" variant="bodySm">Upgrade to Pro for full history.</Text>
           </Banner>
         )}
 
         <InlineFilters preset={preset} onPreset={setPreset} channel={channel} onChannel={setChannel} />
 
-        {error && <Banner tone="critical"><Text as="p">{error}</Text></Banner>}
+        {error && (
+          <Banner tone="critical" title="Could not load traffic sources">
+            <Text as="p">{error}</Text>
+          </Banner>
+        )}
 
         {loading && (
           <Card><SkeletonBodyText lines={6} /></Card>
@@ -77,7 +87,9 @@ export function TrafficSourcesPage() {
             {!data.hasData && (
               <Card>
                 <Box padding="400">
-                  <Text as="p" tone="subdued">No traffic data in this period. UTM data is recorded as orders arrive via webhooks — data will appear after your first orders sync.</Text>
+                  <Text as="p" tone="subdued">
+                    No traffic data in this period. We update traffic data as new orders come in — data will appear after your first orders sync.
+                  </Text>
                 </Box>
               </Card>
             )}
@@ -114,7 +126,9 @@ function InlineFilters({ preset, onPreset, channel, onChannel }: {
   return (
     <Box>
       <BlockStack gap="200">
-        <RangePicker value={preset} onChange={onPreset} />
+        <InlineStack gap="200" blockAlign="center">
+          <RangePicker value={preset} onChange={onPreset} />
+        </InlineStack>
         <ButtonGroup variant="segmented">
           {CHANNELS.map((c) => (
             <Button key={c} pressed={channel === c} onClick={() => onChannel(c)}>

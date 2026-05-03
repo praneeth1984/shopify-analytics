@@ -1,5 +1,5 @@
 import {
-  Page, Card, IndexTable, Banner, Text, BlockStack,
+  Page, Card, IndexTable, Banner, Box, Text, BlockStack,
   SkeletonBodyText, EmptyState, Badge, Button, InlineStack,
 } from "@shopify/polaris";
 import { useInventory } from "../../hooks/useInventory.js";
@@ -8,7 +8,7 @@ import type { InventoryStatus } from "@fbc/shared";
 function statusBadge(status: InventoryStatus) {
   switch (status) {
     case "out_of_stock": return <Badge tone="critical">Out of Stock</Badge>;
-    case "critical":     return <Badge tone="critical">Critical</Badge>;
+    case "critical":     return <Badge tone="warning">Critical</Badge>;
     case "at_risk":      return <Badge tone="warning">At Risk</Badge>;
     case "watch":        return <Badge tone="attention">Watch</Badge>;
     default:             return <Badge tone="success">Healthy</Badge>;
@@ -40,12 +40,17 @@ export function InventoryPage() {
     >
       <BlockStack gap="400">
         {error && (
-          <Banner tone="critical" title="Failed to load inventory data">
-            <Text as="p">{error}</Text>
+          <Banner tone="critical" title="We couldn't load this report">
+            <Text as="p">
+              Try refreshing in a moment. If it keeps failing, use the Feedback page to let us know.
+            </Text>
+            <Box paddingBlockStart="200">
+              <Button onClick={reload}>Retry</Button>
+            </Box>
           </Banner>
         )}
 
-        {data?.plan_capped_to !== null && data?.total_count !== undefined && (
+        {data?.plan_capped_to !== null && data?.total_count !== undefined && data.total_count > (data.plan_capped_to ?? 0) && (
           <Banner tone="info" title={`Showing top ${data.plan_capped_to} at-risk variants`}>
             <Text as="p">
               Upgrade to Pro to see all {data.total_count} variants including healthy inventory.
@@ -57,14 +62,14 @@ export function InventoryPage() {
           {loading ? (
             <SkeletonBodyText lines={8} />
           ) : allHealthy ? (
-            <EmptyState heading="All inventory looks healthy" image="">
+            <EmptyState heading="All inventory looks healthy" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
               <Text as="p" tone="subdued">
                 All active variants have more than 60 days of stock remaining at your current
                 sell rate.
               </Text>
             </EmptyState>
           ) : data && data.rows.length === 0 ? (
-            <EmptyState heading="No inventory data" image="">
+            <EmptyState heading="No inventory data" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
               <BlockStack gap="200">
                 <Text as="p" tone="subdued">
                   No active product variants found.

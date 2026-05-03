@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Banner, BlockStack, Box, Card, DataTable,
+  Banner, BlockStack, Box, Button, Card, DataTable, EmptyState,
   Page, SkeletonBodyText, Text,
 } from "@shopify/polaris";
 import type { DateRangePreset } from "@fbc/shared";
@@ -24,6 +24,19 @@ type AbandonedCartReport =
       historyClampedTo: string | null;
     };
 
+function getCurrentShop(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.shopify?.config?.shop ?? null;
+}
+
+function startReauth() {
+  const shop = getCurrentShop();
+  if (!shop) return;
+  if (typeof window !== "undefined" && window.top) {
+    window.top.location.href = `/auth/install?shop=${encodeURIComponent(shop)}`;
+  }
+}
+
 export function AbandonedCartPage() {
   const [preset, setPreset] = useState<DateRangePreset>("last_30_days");
   const [data, setData] = useState<AbandonedCartReport | null>(null);
@@ -43,12 +56,36 @@ export function AbandonedCartPage() {
     <Page title="Abandoned Cart">
       <BlockStack gap="400">
         {data?.scope_missing && (
-          <Banner tone="warning" title="Checkout permission not enabled">
-            <Text as="p" variant="bodySm">
-              Abandoned cart tracking requires the <strong>read_checkouts</strong> scope.
-              Reinstall the app to enable this report.
-            </Text>
-          </Banner>
+          <>
+            <Banner tone="warning" title="Abandoned cart tracking needs a quick permission update">
+              <BlockStack gap="200">
+                <Text as="p">
+                  To show abandoned checkouts we need one extra permission. Click below to authorise — it takes 5 seconds.
+                </Text>
+                <Box>
+                  <Button variant="primary" onClick={startReauth}>
+                    Enable abandoned cart tracking
+                  </Button>
+                </Box>
+              </BlockStack>
+            </Banner>
+            <Card>
+              <EmptyState
+                heading="Abandoned cart data is one click away"
+                image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E"
+                action={{
+                  content: "Enable abandoned cart tracking",
+                  onAction: startReauth,
+                }}
+              >
+                <p>
+                  We need the <strong>read_checkouts</strong> permission to show you which checkouts
+                  were started but not completed, the products inside them, and how much revenue was
+                  left on the table.
+                </p>
+              </EmptyState>
+            </Card>
+          </>
         )}
 
         {!data?.scope_missing && (
@@ -56,12 +93,16 @@ export function AbandonedCartPage() {
             <RangePicker value={preset} onChange={setPreset} />
 
             {data?.historyClampedTo && (
-              <Banner tone="info">
-                <Text as="p" variant="bodySm">Free plan: showing last 30 days. Upgrade to Pro for full history.</Text>
+              <Banner tone="info" title="Free plan: showing last 30 days">
+                <Text as="p" variant="bodySm">Upgrade to Pro for full history.</Text>
               </Banner>
             )}
 
-            {error && <Banner tone="critical"><Text as="p">{error}</Text></Banner>}
+            {error && (
+              <Banner tone="critical" title="Could not load abandoned cart data">
+                <Text as="p">{error}</Text>
+              </Banner>
+            )}
 
             {loading && <Card><SkeletonBodyText lines={5} /></Card>}
 

@@ -167,7 +167,7 @@ export function GatewayRatesTab() {
 
       <Card padding="0">
         {rates.length === 0 ? (
-          <EmptyState heading="No gateway rates configured" image="">
+          <EmptyState heading="No gateway rates configured" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
             <p>Add rates above to see estimated payment fees in your P&L and product reports.</p>
           </EmptyState>
         ) : (

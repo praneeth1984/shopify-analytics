@@ -1,13 +1,31 @@
 import { useState } from "react";
 import {
-  Page, Card, IndexTable, Banner, Text, InlineStack, Badge,
-  SkeletonBodyText, EmptyState, Tooltip,
+  Page, Card, IndexTable, Banner, Box, Button, Text, InlineStack, Badge,
+  Icon, SkeletonBodyText, EmptyState, Tooltip,
 } from "@shopify/polaris";
+import { ArrowUpIcon, ArrowDownIcon } from "@shopify/polaris-icons";
 import { useProductsPerformance } from "../../hooks/useProductsPerformance.js";
 import { RangePicker } from "../../components/RangePicker.js";
 import { ExportButton } from "../../components/ExportButton.js";
 import { formatMoney, formatMargin } from "../../lib/format.js";
-import type { DateRangePreset } from "@fbc/shared";
+import type { DateRangePreset, Money } from "@fbc/shared";
+
+function ProfitValue({ money }: { money: Money }) {
+  const positive = parseFloat(money.amount) >= 0;
+  return (
+    <InlineStack gap="100" blockAlign="center">
+      <Box>
+        <Icon
+          source={positive ? ArrowUpIcon : ArrowDownIcon}
+          tone={positive ? "success" : "critical"}
+        />
+      </Box>
+      <Text as="span" tone={positive ? "success" : "critical"}>
+        {formatMoney(money)}
+      </Text>
+    </InlineStack>
+  );
+}
 
 export function ProductsPerformancePage() {
   const [preset, setPreset] = useState<DateRangePreset>("last_30_days");
@@ -43,8 +61,13 @@ export function ProductsPerformancePage() {
       </Card>
 
       {error && (
-        <Banner tone="critical" title="Failed to load product performance">
-          <Text as="p">{error}</Text>
+        <Banner tone="critical" title="We couldn't load this report">
+          <Text as="p">
+            Try refreshing in a moment. If it keeps failing, use the Feedback page to let us know.
+          </Text>
+          <Box paddingBlockStart="200">
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </Box>
         </Banner>
       )}
 
@@ -68,7 +91,7 @@ export function ProductsPerformancePage() {
         {loading ? (
           <SkeletonBodyText lines={8} />
         ) : data && data.rows.length === 0 ? (
-          <EmptyState heading="No products in this period" image="">
+          <EmptyState heading="No products in this period" image="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%221%22%20height%3D%221%22/%3E">
             <Text as="p" tone="subdued">Try a wider date range.</Text>
           </EmptyState>
         ) : (
@@ -103,12 +126,7 @@ export function ProductsPerformancePage() {
                 </IndexTable.Cell>
                 <IndexTable.Cell>
                   {row.gross_profit ? (
-                    <Text
-                      as="span"
-                      tone={parseFloat(row.gross_profit.amount) >= 0 ? "success" : "critical"}
-                    >
-                      {formatMoney(row.gross_profit)}
-                    </Text>
+                    <ProfitValue money={row.gross_profit} />
                   ) : (
                     <Tooltip content="Add COGS in Settings to see profit">
                       <Text as="span" tone="subdued">—</Text>
@@ -127,12 +145,7 @@ export function ProductsPerformancePage() {
                     </IndexTable.Cell>
                     <IndexTable.Cell>
                       {row.est_net_profit ? (
-                        <Text
-                          as="span"
-                          tone={parseFloat(row.est_net_profit.amount) >= 0 ? "success" : "critical"}
-                        >
-                          {formatMoney(row.est_net_profit)}
-                        </Text>
+                        <ProfitValue money={row.est_net_profit} />
                       ) : "—"}
                     </IndexTable.Cell>
                   </>

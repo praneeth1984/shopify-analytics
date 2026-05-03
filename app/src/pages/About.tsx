@@ -9,7 +9,15 @@ import {
   Divider,
   Box,
   Badge,
+  Icon,
 } from "@shopify/polaris";
+import {
+  ChartVerticalIcon,
+  CashDollarIcon,
+  ReturnIcon,
+  ProductIcon,
+} from "@shopify/polaris-icons";
+import { PRO_MONTHLY_PRICE } from "@fbc/shared";
 import { navigate } from "../App.js";
 
 export function About() {
@@ -49,28 +57,36 @@ export function About() {
                 <Text as="h2" variant="headingMd">What this app does</Text>
                 <BlockStack gap="300">
                   <InlineStack gap="200" blockAlign="start">
-                    <Text as="span" variant="bodyMd">📊</Text>
+                    <Box>
+                      <Icon source={ChartVerticalIcon} tone="base" />
+                    </Box>
                     <Text as="p" variant="bodyMd">
                       <Text as="span" fontWeight="semibold">Revenue & orders</Text>
                       {" "}— headline numbers with previous-period comparison so you always know if you're up or down.
                     </Text>
                   </InlineStack>
                   <InlineStack gap="200" blockAlign="start">
-                    <Text as="span" variant="bodyMd">💰</Text>
+                    <Box>
+                      <Icon source={CashDollarIcon} tone="base" />
+                    </Box>
                     <Text as="p" variant="bodyMd">
                       <Text as="span" fontWeight="semibold">Gross profit & margin</Text>
                       {" "}— enter your product costs once; see real margin numbers, not estimates.
                     </Text>
                   </InlineStack>
                   <InlineStack gap="200" blockAlign="start">
-                    <Text as="span" variant="bodyMd">↩️</Text>
+                    <Box>
+                      <Icon source={ReturnIcon} tone="base" />
+                    </Box>
                     <Text as="p" variant="bodyMd">
                       <Text as="span" fontWeight="semibold">Returns analytics</Text>
                       {" "}— which products get returned most, why, and how refunds are resolved.
                     </Text>
                   </InlineStack>
                   <InlineStack gap="200" blockAlign="start">
-                    <Text as="span" variant="bodyMd">📦</Text>
+                    <Box>
+                      <Icon source={ProductIcon} tone="base" />
+                    </Box>
                     <Text as="p" variant="bodyMd">
                       <Text as="span" fontWeight="semibold">Top profitable products</Text>
                       {" "}— ranked by gross profit so you know what to double down on.
@@ -80,9 +96,25 @@ export function About() {
               </BlockStack>
             </Card>
 
+            {/* Support */}
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">Support</Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Found a bug or have a feature request? It goes straight to us.
+                  For urgent issues, email{" "}
+                  <Text as="span" fontWeight="semibold">support@firstbridgeconsulting.com</Text>.
+                </Text>
+                <Button onClick={() => navigate("/feedback")}>Send feedback</Button>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  We respond within one business day.
+                </Text>
+              </BlockStack>
+            </Card>
+
             <Divider />
 
-            {/* Hire us CTA */}
+            {/* Hire us CTA — secondary, after the primary content */}
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">Need something custom?</Text>
@@ -117,22 +149,6 @@ export function About() {
               </BlockStack>
             </Card>
 
-            {/* Support */}
-            <Card>
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingMd">Support</Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  Found a bug or have a feature request? It goes straight to us.
-                  For urgent issues, email{" "}
-                  <Text as="span" fontWeight="semibold">support@firstbridgeconsulting.com</Text>.
-                </Text>
-                <Button onClick={() => navigate("/feedback")}>Send feedback</Button>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  We respond within one business day.
-                </Text>
-              </BlockStack>
-            </Card>
-
           </BlockStack>
         </Layout.Section>
 
@@ -163,10 +179,9 @@ export function About() {
             <Card>
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">App version</Text>
-                <Text as="p" variant="bodyMd" tone="subdued">Phase 1 — Free tier</Text>
+                <Text as="p" variant="bodyMd" tone="subdued">Version 1.0 — Free plan</Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Pro plan coming soon. Unlimited history, daily auto-refresh, deeper
-                  cohort views — flat $19/month, no per-order fees.
+                  {`Pro plan coming soon. Unlimited history, daily auto-refresh, deeper cohort views — flat ${PRO_MONTHLY_PRICE}/month, no per-order fees.`}
                 </Text>
               </BlockStack>
             </Card>

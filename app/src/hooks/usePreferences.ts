@@ -13,6 +13,7 @@ import type { GatewayRate } from "@fbc/shared";
 
 export type Preferences = {
   cogsBackupTipDismissed?: boolean;
+  historyClampDismissed?: boolean;
   gatewayRates?: GatewayRate[];
 };
 

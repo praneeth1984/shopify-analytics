@@ -6,6 +6,7 @@
 
 import { Banner, BlockStack, Button, InlineStack, Text } from "@shopify/polaris";
 import type { Plan } from "@fbc/shared";
+import { PRO_MONTHLY_PRICE } from "@fbc/shared";
 import { navigate } from "../App.js";
 
 type Props = {
@@ -20,15 +21,17 @@ export function CogsCapBanner({ plan, used, cap }: Props) {
   if (used < cap) return null;
 
   return (
-    <Banner tone="info" title={`You've reached ${cap} of ${cap} costs on the Free plan`}>
+    <Banner
+      tone="info"
+      title={`You've added costs for ${used} of ${cap} products on the Free plan`}
+    >
       <BlockStack gap="200">
         <Text as="p">
-          Existing costs keep working and your profit numbers stay accurate. To add costs for
-          more products, upgrade to Pro for unlimited SKUs and full history.
+          Pro removes the cap so you can track costs for every variant.
         </Text>
         <InlineStack>
           <Button variant="primary" onClick={() => navigate("/billing")}>
-            View plans
+            {`Upgrade to Pro — ${PRO_MONTHLY_PRICE}/mo`}
           </Button>
         </InlineStack>
       </BlockStack>
