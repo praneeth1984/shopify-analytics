@@ -16,6 +16,7 @@ import type { ComparisonMode, DateRangePreset, OverviewMetrics } from "@fbc/shar
 
 import { navigate } from "../App.js";
 
+import { LiveMetricsCard } from "../components/LiveMetricsCard.js";
 import { MetricCard } from "../components/MetricCard.js";
 import { RangePicker } from "../components/RangePicker.js";
 import { ComparisonPicker } from "../components/ComparisonPicker.js";
@@ -121,6 +122,7 @@ export function Dashboard({ onNavigateToSettings }: Props) {
     <Layout>
       <Layout.Section>
         <BlockStack gap="400">
+          <LiveMetricsCard />
           <InlineStack align="space-between" blockAlign="center" gap="200" wrap>
             <InlineStack gap="300" blockAlign="center">
               <Text as="h2" variant="headingLg">
@@ -276,6 +278,55 @@ export function Dashboard({ onNavigateToSettings }: Props) {
             </Grid.Cell>
           </Grid>
 
+          {data && data.new_customers + data.returning_customers > 0 ? (
+            <Grid>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
+                <NewVsReturningCard
+                  label="New customers"
+                  count={data.new_customers}
+                  totalCount={data.new_customers + data.returning_customers}
+                />
+              </Grid.Cell>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
+                <NewVsReturningCard
+                  label="Returning customers"
+                  count={data.returning_customers}
+                  totalCount={data.new_customers + data.returning_customers}
+                />
+              </Grid.Cell>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
+                <Card>
+                  <BlockStack gap="200">
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      New customer revenue
+                    </Text>
+                    <Text as="p" variant="heading2xl">
+                      {formatMoney(data.new_customer_revenue)}
+                    </Text>
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      AOV {formatMoney(data.new_customer_aov)}
+                    </Text>
+                  </BlockStack>
+                </Card>
+              </Grid.Cell>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
+                <Card>
+                  <BlockStack gap="200">
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      Returning customer revenue
+                    </Text>
+                    <Text as="p" variant="heading2xl">
+                      {formatMoney(data.returning_customer_revenue)}
+                    </Text>
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      AOV {formatMoney(data.returning_customer_aov)}
+                    </Text>
+                  </BlockStack>
+                </Card>
+              </Grid.Cell>
+            </Grid>
+          ) : null}
+
           {data ? (
             <Suspense fallback={<ChartSkeleton />}>
               <RevenueOrdersChart data={data} currencyCode={currencyCode} />
@@ -338,6 +389,33 @@ export function Dashboard({ onNavigateToSettings }: Props) {
         </BlockStack>
       </Layout.Section>
     </Layout>
+  );
+}
+
+function NewVsReturningCard({
+  label,
+  count,
+  totalCount,
+}: {
+  label: string;
+  count: number;
+  totalCount: number;
+}) {
+  const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
+  return (
+    <Card>
+      <BlockStack gap="200">
+        <Text as="span" variant="bodySm" tone="subdued">
+          {label}
+        </Text>
+        <Text as="p" variant="heading2xl">
+          {formatNumber(count)}
+        </Text>
+        <Text as="span" variant="bodySm" tone="subdued">
+          {`${pct.toFixed(1)}% of total`}
+        </Text>
+      </BlockStack>
+    </Card>
   );
 }
 

@@ -32,6 +32,11 @@ type Aggregate = {
   uniqueCustomers: Set<string>;
   pendingReturnsCount: number;
   pendingReturnsValueMinor: bigint;
+  // F37: new vs returning split. Counted only when customer.id is present.
+  newCustomerOrders: number;
+  returningCustomerOrders: number;
+  newCustomerRevenueMinor: bigint;
+  returningCustomerRevenueMinor: bigint;
 };
 
 function emptyAggregate(): Aggregate {
@@ -41,6 +46,10 @@ function emptyAggregate(): Aggregate {
     uniqueCustomers: new Set<string>(),
     pendingReturnsCount: 0,
     pendingReturnsValueMinor: 0n,
+    newCustomerOrders: 0,
+    returningCustomerOrders: 0,
+    newCustomerRevenueMinor: 0n,
+    returningCustomerRevenueMinor: 0n,
   };
 }
 
@@ -79,13 +88,26 @@ function aggregateOrders(orders: OrderNode[]): Aggregate {
     // currentTotalPriceSet is unreliable for manual refunds; explicit calculation is safer.
     const grossMinor = toMinorUnits(o.totalPriceSet.shopMoney.amount);
     const refundedMinor = toMinorUnits(o.totalRefundedSet.shopMoney.amount);
-    agg.revenueMinor += grossMinor - refundedMinor;
+    const netMinor = grossMinor - refundedMinor;
+    agg.revenueMinor += netMinor;
     if (o.customer?.id) agg.uniqueCustomers.add(o.customer.id);
+
+    // F37: new vs returning split.
+    // numberOfOrders is the customer's lifetime order count (incl. this order).
+    // === 1 → first-time on this order; > 1 → returning.
+    // Skip when customer is null (guest with no email).
+    if (o.customer) {
+      if (o.customer.numberOfOrders === 1) {
+        agg.newCustomerOrders += 1;
+        agg.newCustomerRevenueMinor += netMinor;
+      } else if (o.customer.numberOfOrders > 1) {
+        agg.returningCustomerOrders += 1;
+        agg.returningCustomerRevenueMinor += netMinor;
+      }
+    }
 
     if (o.returnStatus === "RETURN_REQUESTED" || o.returnStatus === "IN_PROGRESS") {
       agg.pendingReturnsCount += 1;
-      const grossMinor = toMinorUnits(o.totalPriceSet.shopMoney.amount);
-      const refundedMinor = toMinorUnits(o.totalRefundedSet.shopMoney.amount);
       const remaining = grossMinor - refundedMinor;
       agg.pendingReturnsValueMinor += remaining > 0n ? remaining : 0n;
     }
@@ -176,6 +198,16 @@ export async function computeOverview(
         : null,
   };
 
+  // F37: new vs returning split (computed on attributed orders only).
+  const newCustomerAovMinor =
+    current.agg.newCustomerOrders > 0
+      ? current.agg.newCustomerRevenueMinor / BigInt(current.agg.newCustomerOrders)
+      : 0n;
+  const returningCustomerAovMinor =
+    current.agg.returningCustomerOrders > 0
+      ? current.agg.returningCustomerRevenueMinor / BigInt(current.agg.returningCustomerOrders)
+      : 0n;
+
   return {
     range,
     comparison,
@@ -216,6 +248,12 @@ export async function computeOverview(
     return_rate_series,
     revenue_series_previous,
     orders_series_previous,
+    new_customers: current.agg.newCustomerOrders,
+    returning_customers: current.agg.returningCustomerOrders,
+    new_customer_revenue: fromMinor(current.agg.newCustomerRevenueMinor, currency),
+    returning_customer_revenue: fromMinor(current.agg.returningCustomerRevenueMinor, currency),
+    new_customer_aov: fromMinor(newCustomerAovMinor, currency),
+    returning_customer_aov: fromMinor(returningCustomerAovMinor, currency),
     truncated: current.truncated,
   };
 }

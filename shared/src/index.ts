@@ -80,6 +80,26 @@ export type OverviewMetrics = {
   return_rate_series: TimeSeriesPoint[]; // basis points; null when 0 orders in bucket
   revenue_series_previous?: TimeSeriesPoint[];
   orders_series_previous?: TimeSeriesPoint[];
+  // F37: new vs returning customer split. Counts orders in the range whose
+  // customer.numberOfOrders === 1 (first-time) vs > 1 (returning).
+  // Orders with no customer (e.g. guest with no email) are not counted in either bucket.
+  new_customers: number;
+  returning_customers: number;
+  new_customer_revenue: Money;
+  returning_customer_revenue: Money;
+  new_customer_aov: Money;
+  returning_customer_aov: Money;
+};
+
+// ---- F42: Live Metrics (last 24 hours) ----
+
+export type LiveMetrics = {
+  orders: number;
+  gross_revenue: Money;
+  aov: Money;
+  as_of: string; // ISO timestamp at which metrics were computed
+  window_start: string; // ISO timestamp — start of the 24-hour window
+  window_end: string;   // ISO timestamp — end of the 24-hour window (= as_of)
 };
 
 export type ReturnedVariant = {
@@ -657,29 +677,3 @@ export type GeographyResponse = {
   history_clamped_to: HistoryClamp | null;
   cluster_precision: GeographyClusterPrecision;
 };
-
-// ---- F42: Feedback & Feature Requests Hub ----
-
-export type FeedbackType = 'bug_report' | 'feature_request';
-export type FeedbackStatus = 'open' | 'reviewing' | 'planned' | 'shipped' | 'wont_fix';
-export type BugSeverity = 'minor' | 'blocks' | 'data_wrong';
-export type FeatureFrequency = 'daily' | 'weekly' | 'monthly' | 'occasionally';
-
-export interface FeedbackItem {
-  id: string;
-  type: FeedbackType;
-  title: string;
-  status: Exclude<FeedbackStatus, 'reviewing' | 'wont_fix'>;
-  upvotes: number;
-  hasUpvoted: boolean;
-  submittedAt: string;
-}
-
-export interface SubmitFeedbackRequest {
-  type: FeedbackType;
-  title: string;
-  description: string;
-  page?: string;
-  severity?: BugSeverity;
-  frequency?: FeatureFrequency;
-}

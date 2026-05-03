@@ -11,6 +11,7 @@ import type { Env } from "./env.js";
 import { authRoutes } from "./routes/auth.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { metricsRoutes } from "./routes/metrics.js";
+import { metricsLiveRoutes } from "./routes/metrics-live.js";
 import { metricsProfitRoutes } from "./routes/metrics-profit.js";
 import { metricsReturnsRoutes } from "./routes/metrics-returns.js";
 import { metricsGeographyRoutes } from "./routes/metrics-geography.js";
@@ -69,6 +70,7 @@ export function createApp() {
   app.route("/auth", authRoutes());
   app.route("/webhooks", webhookRoutes());
   // More specific routes first so they take precedence in Hono's matcher.
+  app.route("/api/metrics/live", metricsLiveRoutes());
   app.route("/api/metrics/profit", metricsProfitRoutes());
   app.route("/api/metrics/returns", metricsReturnsRoutes());
   app.route("/api/metrics/geography", metricsGeographyRoutes());
