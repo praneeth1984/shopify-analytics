@@ -248,10 +248,6 @@ export function PLReportPage() {
           </BlockStack>
         ) : null}
       </Card>
-
-      <Text as="p" variant="bodySm" tone="subdued">
-        <Badge>Free</Badge> P&L summary. Upgrade to Pro for line-item drill-down and PDF export.
-      </Text>
     </BlockStack>
   );
 }
