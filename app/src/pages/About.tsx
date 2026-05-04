@@ -6,7 +6,6 @@ import {
   BlockStack,
   InlineStack,
   Button,
-  Divider,
   Box,
   Badge,
   Icon,
@@ -36,10 +35,10 @@ export function About() {
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">FirstBridge Consulting</Text>
-                  <Badge tone="success">Shopify Development Agency</Badge>
+                  <Badge tone="success">Shopify Development</Badge>
                 </InlineStack>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  We're a Shopify development agency that builds custom apps,
+                  We're a Shopify development team that builds custom apps,
                   storefronts, and integrations for growing brands. FirstBridge
                   Analytics is the tool we wished existed — genuinely useful profit
                   visibility, free to start, no per-order billing surprises.
@@ -109,43 +108,6 @@ export function About() {
                 <Text as="p" variant="bodyMd" tone="subdued">
                   We respond within one business day.
                 </Text>
-              </BlockStack>
-            </Card>
-
-            <Divider />
-
-            {/* Hire us CTA — secondary, after the primary content */}
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Need something custom?</Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  If this app gives you the numbers and now you want to act on them —
-                  custom integrations, bespoke analytics dashboards, Shopify app
-                  development, or storefront builds — that's exactly what we do for
-                  clients.
-                </Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  A single project with us typically delivers more value than years of
-                  SaaS subscriptions. We scope honestly, deliver on time, and don't
-                  disappear after handoff.
-                </Text>
-                <Box paddingBlockStart="200">
-                  <InlineStack gap="300">
-                    <Button
-                      variant="primary"
-                      url="https://firstbridgeconsulting.com"
-                      external
-                    >
-                      Visit FirstBridge Consulting
-                    </Button>
-                    <Button
-                      url="mailto:hello@firstbridgeconsulting.com"
-                      external
-                    >
-                      Email us
-                    </Button>
-                  </InlineStack>
-                </Box>
               </BlockStack>
             </Card>
 

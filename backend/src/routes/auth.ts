@@ -11,7 +11,7 @@ import type { Env } from "../env.js";
 import { isValidShopDomain } from "../shopify/shop-domain.js";
 import { installRedirectUrl, verifyOAuthCallback, exchangeCodeForToken } from "../shopify/oauth.js";
 import { registerRuntimeWebhooks } from "../shopify/webhook-register.js";
-import { BadRequest } from "../lib/errors.js";
+import { BadRequest, Unauthorized } from "../lib/errors.js";
 import { log } from "../lib/logger.js";
 
 const SCOPES = "read_products,read_orders,read_all_orders,read_customers,read_inventory,read_reports,read_returns";
@@ -27,11 +27,13 @@ function randomState(): string {
 export function authRoutes() {
   const app = new Hono<{ Bindings: Env }>();
 
-  app.get("/install", (c) => {
+  app.get("/install", async (c) => {
     const shop = c.req.query("shop");
     if (!isValidShopDomain(shop)) throw BadRequest("invalid shop param");
     const env = c.env;
     const state = randomState();
+    // Store state in KV (TTL 10 min) so the callback can verify it.
+    await env.BULK_OPS_KV.put(`oauth_state:${state}`, shop, { expirationTtl: 600 });
     const redirectUri = `${env.SHOPIFY_APP_URL}/auth/callback`;
     const url = installRedirectUrl({
       shopDomain: shop,
@@ -50,6 +52,13 @@ export function authRoutes() {
 
     const shop = url.searchParams.get("shop");
     const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+
+    // Validate state to prevent CSRF on the fallback OAuth path.
+    if (!state) throw BadRequest("missing state");
+    const storedShop = await env.BULK_OPS_KV.get(`oauth_state:${state}`);
+    if (!storedShop || storedShop !== shop) throw Unauthorized("invalid state");
+    await env.BULK_OPS_KV.delete(`oauth_state:${state}`);
     if (!isValidShopDomain(shop)) throw BadRequest("invalid shop param");
     if (!code) throw BadRequest("missing code");
 
